@@ -4,8 +4,8 @@ import pickle
 import string
 import re
 
-print("Loading classifier")
-pickle_in = open("Data/Pickle/classifier.pickle", "rb")
+print( "Loading classifier" )
+pickle_in = open( "Data/Pickle/classifier.pickle", "rb" )
 classifier = pickle.load(pickle_in)
 
 # Read files containing keywords for aspect classification

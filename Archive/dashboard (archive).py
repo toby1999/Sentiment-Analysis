@@ -2,7 +2,7 @@ import pandas as pd
 import pickle
 import plotly.express as px
 import chart_studio
-from sentiment import classify
+from classify import classify
 from plotly.graph_objs import *
 import plotly.graph_objects as go
 import plotly.offline as py

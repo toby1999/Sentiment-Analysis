@@ -4,6 +4,7 @@ import nltk.classify.util
 import pickle
 
 def extract_features(word_list):
+    # Returns a dictionary of words for the classifier
     return dict([(word, True) for word in word_list])
 
 # Initialise the dataframe
@@ -23,7 +24,7 @@ threshold_negative = int(threshold_factor * len(features_negative))
 
 # Extract train and test features
 features_train = features_positive[:threshold_positive] + features_negative[:threshold_negative]
-features_test = features_positive[threshold_positive:] + features_negative[threshold_negative:]
+features_test  = features_positive[threshold_positive:] + features_negative[threshold_negative:]
 
 print("\nNumber of training datapoints:", len(features_train))
 print("Number of test datapoints:", len(features_test))
