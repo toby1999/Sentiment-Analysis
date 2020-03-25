@@ -1,13 +1,8 @@
 print("Loading modules")
 import pandas as pd
-import operator
-import re
 import word_freq
-import string
-import sys
-import tabulate
 import pickle
-from collections import Counter
+from tabulate import tabulate
 from nltk.corpus import stopwords
 
 pd.set_option('display.max_columns', None)
@@ -21,20 +16,21 @@ dataset = pd.DataFrame(spreadsheet,
 
 def getReviews(data):
     '''
-    Returns a list of reviews from the spreadsheet
+    Returns a list of reviews from the Excel spreadsheet
     '''
     reviews = []
+
     for row in data.itertuples():
         comment = str(row[5])
+        # Omit blank comments
+        if comment == 'nan': continue
 
-        if comment == "nan": continue
-
-        company     = str(row[1])
-        course      = str(row[2])
-        trainer     = str(row[3])
-        location    = str(row[4])
-        score       = int(row[6])
-        date        = str(row[7])
+        company  =  str(row[1])
+        course   =  str(row[2])
+        trainer  =  str(row[3])
+        location =  str(row[4])
+        score    =  int(row[6])
+        date     =  str(row[7])
 
         review = (company, course, trainer, location, comment, score, date)
         reviews.append(review)
@@ -47,10 +43,14 @@ def makeDataFrame(reviews):
     Creates the dataframe
     '''
     print("Loading DataFrame")
-    dFrame = pd.DataFrame(data=reviews,
-                          columns=['Training company', 'Course',
-                                   'Trainer', 'Location',
-                                   'Review', 'Score', 'Date'])
+    dFrame = pd.DataFrame(data = reviews,
+                          columns = ['Training company',
+                                     'Course',
+                                     'Trainer',
+                                     'Location',
+                                     'Review',
+                                     'Score',
+                                     'Date'])
     print("DataFrame ready")
     return dFrame
 
@@ -59,17 +59,17 @@ def showWordFreq(n_most_common):
     '''
     Prints list of n most common words
     '''
-    word_frequency = word_freq.getWordFreq(dataFrame['Review'], n_most_common, stopwords.words('english'))
-    # print(tabulate(word_frequency, headers=['Word', 'Frequency']))
-    count = 0
-    for word in word_frequency:
-        count += 1
-        print(count, word[1], "\t", word[0])
+    word_frequency = word_freq.getWordFreq(dataFrame['Review'],
+                                           n_most_common,
+                                           stopwords.words('english'))
+
+    print("\n" + tabulate(word_frequency,
+                          headers   = ['Word', 'Frequency'],
+                          showindex = "always") + "\n")
+
 
 def showHead(n):
-    '''
-    Prints the first n reviews in the dataframe
-    '''
+    # Prints the first n reviews in the dataframe
     print(dataFrame.head(n))
 
 
@@ -82,4 +82,4 @@ dataFrame = makeDataFrame(reviews)
 
 # showHead(15)
 
-showWordFreq(500)
+showWordFreq(10)

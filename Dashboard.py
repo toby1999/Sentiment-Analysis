@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-print("")
 import random
 import pickle
 import plotly
 import unicodedata
+from datetime import date
+from dateutil.relativedelta import relativedelta
 import plotly.graph_objs as go
 from plotly.offline import plot
 import plotly.express as px
@@ -12,10 +13,9 @@ from classify import classify
 pickle_df  = open("Data/Pickle/dataFrame.pickle", "rb")
 df  = pickle.load(pickle_df)
 
-df = df[ (df["Training company"] == "Aperture Science") ]
+df = df[(df["Training company"] == "Aperture Science")]
 
-print(df.head()) # Print head of the dataframe
-
+# print(df.head()) # Print head of the dataframe
 
 
 def sentiment_pie(data):
@@ -104,9 +104,35 @@ def choropleth_map():
     )
     return dict(data=data, layout=layout)
 
-def best_trainers(df):
-    #df = df.groupby("Trainer")
-    df = df["Trainer"].unique().tolist()
+def best_trainers(df, months):
+    # today = datetime.datetime.now()
+    six_months = date.today() + relativedelta(months=-months)
+    print(six_months)
+
+    trainer_list = df["Trainer"].unique().tolist()
+    print(trainer_list)
+    # Remove whitespace
+    # for i in range(len(trainer_list)):
+    #     trainer_list[i] = trainer_list[i].strip()
+
+
+    # Yeah ahaha
+    # Makes me appreciate the drive into town even more than before
+    # Yeah definitely, we need to make up for lost time
+    # Hopefully people go back to Exe in July or something if the situation doesn't escalate further
+    trainer = df['Trainer'] == "Ronni Rutan \xa0"
+    trainer1 = df[trainer]
+    print(trainer1.head())
+
+
+    # trainer = df["Trainer"] == "Ronni Rutan \xa0"
+    # print(trainer.head())
+
+
+    # for trainer in trainer_list:
+    #     dataFrame = df[(df["Trainer"] == trainer)]
+    #     print(dataFrame.head())
+
     trainers = []
     for trainer in df:
         trainers.append(trainer)
@@ -180,7 +206,7 @@ app.layout = html.Div(children=[
         ),
         html.Div(
             dcc.Graph(id="trainers§",
-                figure=best_trainers(df)
+                figure=best_trainers(df, 3)
             )
         )
     ])
