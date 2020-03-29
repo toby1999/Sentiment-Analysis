@@ -2,8 +2,12 @@
 import random
 import pickle
 import plotly
+import calendar
 import unicodedata
-from datetime import date
+from datetime import date, timedelta
+import datetime
+import pandas as pd
+from dateutil import rrule
 from dateutil.relativedelta import relativedelta
 import plotly.graph_objs as go
 from plotly.offline import plot
@@ -13,31 +17,120 @@ from classify import classify
 pickle_df  = open("Data/Pickle/dataFrame.pickle", "rb")
 df  = pickle.load(pickle_df)
 
-df = df[(df["Training company"] == "Aperture Science")]
+df = df[(df["Training company"] == "Entertainment 720")]
 
-# print(df.head()) # Print head of the dataframe
+colours = []
+with open("Data/colours.txt", "r") as colours_file:
+    for colour in colours_file:
+        colours.append(colour.rstrip())
+colours_file.close()
+
+def word_cloud():
+    fig = go.Figure()
+
+    # Constants
+    img_width = 1600
+    img_height = 900
+    scale_factor = 0.5
 
 
-def sentiment_pie(data):
+    # Add invisible scatter trace.
+    # This trace is added to help the autoresize logic work.
+    fig.add_trace(
+        go.Scatter(
+            x=[0, img_width * scale_factor],
+            y=[0, img_height * scale_factor],
+            mode="markers",
+            marker_opacity=0
+        )
+    )
+    # Configure axes
+    fig.update_xaxes(
+        visible=False,
+        range=[0, img_width * scale_factor]
+    )
+
+    fig.update_yaxes(
+        visible=False,
+        range=[0, img_height * scale_factor],
+        # the scaleanchor attribute ensures that the aspect ratio stays constant
+        scaleanchor="x"
+    )
+    # Add image
+    fig.add_layout_image(
+        dict(
+            x=0,
+            sizex=img_width * scale_factor,
+            y=img_height * scale_factor,
+            sizey=img_height * scale_factor,
+            xref="x",
+            yref="y",
+            opacity=1.0,
+            layer="below",
+            sizing="stretch",
+            source="https://raw.githubusercontent.com/michaelbabyn/plot_data/master/bridge.jpg")
+    )
+
+    # Configure other layout
+    fig.update_layout(
+        width=img_width * scale_factor,
+        height=img_height * scale_factor,
+        margin={"l": 0, "r": 0, "t": 0, "b": 0},
+    )
+
+    return fig
+
+
+def sentiment_pie(df, aspect):
+
+    positive = 0
+    negative = 0
+
+    for review in df.iterrows():
+        sentiment = classify(review[1][4])
+        if sentiment[aspect] > 0:
+            positive += 1
+        if sentiment[aspect] < 0:
+            negative += 1
+
+
     # Trace pie chart
-    trace = go.Pie(labels = ["Positive", "Negative", "Neutral"],
-                 values = data,
-                 marker = {
-                 'colors' : ['rgb(10, 120, 0)',       # Green
-                             'rgb(220, 85, 85)',      # Red
-                             'rgb(195, 195, 195)',]}, # Grey
+    trace = go.Pie(labels = ["Positive", "Negative"],
+                 values = [positive, negative],
+                 marker={"colors": ["#264e86", "#dcdee6"]},
                  name = "Overall",
                  hoverinfo = 'label',
                  sort = False)
     layout = dict(title="Average Sentiment", showlegend=True)
     return dict(data=[trace], layout=layout)
 
-def review_frequency():
+def review_frequency(df, n):
     # Number of reviews per month
+    today = datetime.date(2019,4,2) # temporary date for demo
+    start_date = pd.Timestamp(today + relativedelta(days=-n))
+
+    # months in daterange stored here
+    days = []
+    reviews = []
+    # For loop to create a list of months
+    for dt in rrule.rrule(rrule.DAILY, dtstart=start_date, until=today): # dt is a datetime.datetime
+        day_start = pd.Timestamp(dt)
+        day_end = pd.Timestamp(dt + relativedelta(days=1))
+        # Filters data frame to each day
+        mask = (df['Date'] >= day_start) & (df['Date'] < day_end)
+        day_df = df.loc[mask]
+        day = str(dt.day)
+        month = str(calendar.month_name[dt.month])
+        month = ''.join(month.split())[:3]
+        date = month+" "+day
+        days.append(date)
+
+        reviews.append(len(day_df.index))
+
     trace = go.Scatter(
-        x = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-        y = [50,56,44,65,59,60],
-        name="Number of reviews by month",
+        x = days,
+        y = reviews,
+        name="Number of reviews by day",
         fill="tozeroy",
         fillcolor="#e6f2ff",
     )
@@ -45,15 +138,18 @@ def review_frequency():
 
     layout = go.Layout(
         autosize=True,
-        xaxis=dict(showgrid=False),
-        margin=dict(l=33, r=25, b=37, t=5, pad=4),
+        xaxis=dict(showgrid=False, showticklabels=False),
+        xaxis_title="Date",
+        yaxis_title="Number of reviews",
+        margin=dict(l=33, r=25, b=40, t=50, pad=4),
         paper_bgcolor="white",
         plot_bgcolor="white",
+        title_text="Review frequency over the last " + str(n) + " days",
     )
     return {"data": data, "layout": layout}
 
 
-def word_cloud():
+def word_cloud2():
     # Trace word cloud
 
     # Word cloud data
@@ -104,58 +200,102 @@ def choropleth_map():
     )
     return dict(data=data, layout=layout)
 
-def best_trainers(df, months):
-    # today = datetime.datetime.now()
-    six_months = date.today() + relativedelta(months=-months)
-    print(six_months)
 
-    trainer_list = df["Trainer"].unique().tolist()
-    print(trainer_list)
-    # Remove whitespace
-    # for i in range(len(trainer_list)):
-    #     trainer_list[i] = trainer_list[i].strip()
+def trainer_sentiments(df, aspect, n):
+    today = datetime.date(2019,4,2) # temporary date for demo
+    # Daterange only includes current month if 'today' is beyond 25th of the month
+    if today.day > 25:
+        today += datetime.timedelta(7)
+    # sets the daterange to the first of the month
+    end_date = today.replace(day=1)
+    start_date = pd.Timestamp(end_date + relativedelta(months=-n))
 
+    # months in daterange stored here
+    months = []
+    # For loop to create a list of months
+    for dt in rrule.rrule(rrule.MONTHLY, dtstart=start_date, until=end_date):
+        months.append(calendar.month_name[dt.month])
+    months.pop()
 
-    # Yeah ahaha
-    # Makes me appreciate the drive into town even more than before
-    # Yeah definitely, we need to make up for lost time
-    # Hopefully people go back to Exe in July or something if the situation doesn't escalate further
-    trainer = df['Trainer'] == "Ronni Rutan \xa0"
-    trainer1 = df[trainer]
-    print(trainer1.head())
+    # Filters data frame to only contain reviews in the last n months
+    df = df[(df['Date'] >= start_date)]
+    # Create a list of trainers from the data frame
+    trainer_list = df[aspect].unique().tolist()
+    # Sentiment values for each trainer stored here
+    trainer_sentiments = []
+    # For loop to calculate trainer sentiments for each month in daterange
+    for i in range(len(trainer_list)):
+        # filters the data frame to only include the current trainer
+        trainer_df = df[(df[aspect] == trainer_list[i])]
+        # lists of monthly sentiment values for each trainer stored here
+        sentiment_values = []
 
+        for dt in rrule.rrule(rrule.MONTHLY, dtstart=start_date, until=end_date):
+            # Sentiments for each review stored here
+            review_sentiments = []
 
-    # trainer = df["Trainer"] == "Ronni Rutan \xa0"
-    # print(trainer.head())
+            days_in_month = calendar.monthrange(dt.year, dt.month)[1]
+            month_start = dt
+            month_end = dt + timedelta(days=days_in_month)
 
+            # Filters data frame to each month
+            mask = (trainer_df['Date'] >= month_start) & (trainer_df['Date'] < month_end)
+            reviews_df = trainer_df.loc[mask]
 
-    # for trainer in trainer_list:
-    #     dataFrame = df[(df["Trainer"] == trainer)]
-    #     print(dataFrame.head())
+            # Iterates through data frame and classifies sentiments
+            for review in reviews_df.iterrows():
+                sentiment = classify(review[1][4])
+                review_sentiments.append(sentiment[aspect])
 
-    trainers = []
-    for trainer in df:
-        trainers.append(trainer)
+            # calculate average sentiment across all reviews in the month
+            if len(review_sentiments) == 0:
+                sentiment_values.append(None)
+            else:
+                avg_sentiment = sum(review_sentiments)/len(review_sentiments)
+                sentiment_values.append((avg_sentiment+1)/2)
+        # Append monthly sentiment values for each trainer to list of 'sentiment_values'
+        trainer_sentiments.append((sentiment_values, trainer_list[i].strip()))
+
+    # Sentiment values for Plotly stored here
+    sentiments = []
+    # Exclude trainers not mentioned in any reviews
+    for trainer in trainer_sentiments:
+        x = False
+        for sentiment in trainer[0]:
+            if sentiment != None:
+                x = True
+        if x != True:
+            continue
+        sentiments.append(trainer)
+
 
     fig = go.Figure(layout=dict(autosize=True,
                                 xaxis=dict(showgrid=True),
                                 margin=dict(l=33, r=25, b=37, t=5, pad=4),
                                 paper_bgcolor="white",
-                                plot_bgcolor="white")
+                                plot_bgcolor="white",
+                                xaxis_title="Month",
+                                yaxis_title="Sentiment score",
+                                )
     )
 
-    fig.add_trace(go.Scatter(x=['Jan','Feb','Mar','Apr','May','Jun'], y=[0.74,0.76,0.69,0.71,0.70,0.75],
-                    mode='lines+markers',
-                    line_shape='spline',
-                    name=trainers[0]))
-    fig.add_trace(go.Scatter(x=['Jan','Feb','Mar','Apr','May','Jun'], y=[0.75,0.72,0.74,0.63,0.65,0.64],
-                    mode='lines+markers',
-                    line_shape='spline',
-                    name=trainers[1]))
+
+    x = len(colours)//len(sentiments)
+    count = 0
+    cols = []
+    for col in range(len(sentiments)):
+        cols.append(colours[count])
+        count += x
+
+    for trainer, color in zip(sentiments, cols):
+        fig.add_trace(go.Scatter(x=months, y=trainer[0],
+                        mode='lines+markers',
+                        # line_shape='spline',
+                        connectgaps=True,
+                        marker=dict(color=color),
+                        name=trainer[1]))
+
     return fig
-
-
-
 
 
 import dash
@@ -172,7 +312,7 @@ app.layout = html.Div(children=[
         # Sentiment pie charts
         html.Div(
             dcc.Graph(id="sentiment-pie",
-                figure=sentiment_pie([0.75, 0.08, 0.17])
+                figure=sentiment_pie(df, 'Course')
             )
         ),
         # Dropdown
@@ -196,7 +336,7 @@ app.layout = html.Div(children=[
         # Number of reviews
         html.Div(
             dcc.Graph(id="review frequency",
-                figure=review_frequency()
+                figure=review_frequency(df, 180)
             )
         ),
         html.Div(
@@ -205,12 +345,13 @@ app.layout = html.Div(children=[
             )
         ),
         html.Div(
-            dcc.Graph(id="trainers§",
-                figure=best_trainers(df, 3)
+            dcc.Graph(id="trainers",
+                figure=trainer_sentiments(df, 'Trainer', 6)
             )
-        )
+        ),
     ])
 ])
+
 
 # @app.callback(dash.dependencies.Output('sentiment-pie', 'figure'),
 #              [dash.dependencies.Input('dropdown', "value")])

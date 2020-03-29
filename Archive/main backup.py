@@ -13,8 +13,7 @@ spreadsheet = pd.read_excel ('Data/coursecheck_data.xlsx') # Open spreadsheet
 dataset = pd.DataFrame(spreadsheet,
                        columns= ['Training Company', 'Course Name',
                                  'Trainer name', 'Location', 'General Comments',
-                                 'More comments 1', 'Overall Score (1-5)',
-                                 'Review Date'])
+                                 'Overall Score (1-5)', 'Review Date'])
 
 def getReviews(data):
     '''
@@ -24,29 +23,18 @@ def getReviews(data):
 
     for row in data.itertuples():
         comment = str(row[5])
-        more_comments = str(row[6])
         # Omit blank comments
-        if comment == 'nan' and more_comments == 'nan' : continue
+        if comment == 'nan': continue
 
-        company  =  str(row[1]).strip()
-        course   =  str(row[2]).strip()
-        trainer  =  str(row[3]).strip()
-        location =  str(row[4]).strip()
-        score    =  int(row[7])
-        date     =  pd.Timestamp(datetime.strptime(str(row[8]) , '%Y-%m-%d %H:%M:%S'))
+        company  =  str(row[1])
+        course   =  str(row[2])
+        trainer  =  str(row[3])
+        location =  str(row[4])
+        score    =  int(row[6])
+        date     =  pd.Timestamp(datetime.strptime(str(row[7]) , '%Y-%m-%d %H:%M:%S'))
 
-        if comment == 'nan':
-            review = (company, course, trainer, location, more_comments, score, date)
-            reviews.append(review)
-
-        if more_comments == 'nan':
-            review = (company, course, trainer, location, comment, score, date)
-            reviews.append(review)
-
-        else:
-            comment = comment + ". " + more_comments
-            review = (company, course, trainer, location, comment, score, date)
-            reviews.append(review)
+        review = (company, course, trainer, location, comment, score, date)
+        reviews.append(review)
 
     return reviews
 
@@ -65,7 +53,7 @@ def makeDataFrame(reviews):
                                      'Review',
                                      'Score',
                                      'Date'])
-    print("DataFrame ready (" +str(len(dFrame.index)), "reviews)")
+    print("DataFrame ready")
     return dFrame
 
 

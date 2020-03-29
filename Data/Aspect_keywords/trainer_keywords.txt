@@ -1,7 +1,12 @@
 trainer
+trainers
 tutor
+tutors
 facilitator
+facilitators
 instructor
+instructor
+teacher
 teacher
 he
 she

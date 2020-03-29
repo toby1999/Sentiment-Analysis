@@ -36,19 +36,27 @@ def aspect(sentence):
     for word in words:
 
         if word in course_keywords:
-            aspects['course_content'] = 1
+            aspects['course_content'] += 1
 
         if word in trainer_keywords:
-            aspects['trainer'] = 1
+            aspects['trainer'] += 1
 
         if word in venue_keywords:
-            aspects['venue'] = 1
+            aspects['venue'] += 1
+
+    aspects = sorted(aspects.items(), key=operator.itemgetter(1), reverse = True)
+    
+    aspect_sentiment = aspects[0][0]
 
     # Return sentiment aspect
-    if  sum(aspects.values()) == 0:
-        aspects['overall'] = 1
+    if  aspects[0][1] +\
+        aspects[1][1] +\
+        aspects[2][1] +\
+        aspects[3][1] != 0:
+        return aspect_sentiment
 
-    return aspects
+    else: # If no specific aspects were found, return 'overall' sentiment
+        return 'overall'
 
 
 
@@ -60,7 +68,6 @@ def classify(string):
     '''
     Takes in a review and returns its sentiments
     '''
-    # variables to store sentiment values
     overall_sentiment = 0
     trainer_sentiment = 0
     course_sentiment  = 0
@@ -76,54 +83,44 @@ def classify(string):
     for sentence in sentences:
         # Classifier is used to determine positive or negative
         probdist = classifier.prob_classify(extract_features(sentence.split()))
-        sentiment = probdist.max() # Positive or negative
+        pred_sentiment = probdist.max()
 
-        if sentiment == 'Positive':
-
-            if aspect(sentence)['course_content'] == 1:
-                course_sentiment += 1
-
-            if aspect(sentence)['trainer'] == 1:
-                trainer_sentiment += 1
-
-            if aspect(sentence)['venue'] == 1:
-                venue_sentiment += 1
-
-            if aspect(sentence)['overall'] == 1:
+        if pred_sentiment == 'Positive':
+            if aspect(sentence) == 'overall':
                 overall_sentiment += 1
 
-        if sentiment == 'Negative':
+            if aspect(sentence) == 'course_content':
+                course_sentiment += 1
 
-            if aspect(sentence)['course_content'] == 1:
-                course_sentiment -= 1
+            if aspect(sentence) == 'trainer':
+                trainer_sentiment += 1
 
-            if aspect(sentence)['trainer'] == 1:
-                trainer_sentiment -= 1
+            if aspect(sentence) == 'venue':
+                venue_sentiment += 1
 
-            if aspect(sentence)['venue'] == 1:
-                venue_sentiment -= 1
-
-            if aspect(sentence)['overall'] == 1:
+        else:
+            if aspect(sentence) == 'overall':
                 overall_sentiment -= 1
 
-    def make_1_or_0(sentiment):
-        if sentiment > 0: return  1
-        if sentiment < 0: return -1
-        else: return 0
+            if aspect(sentence) == 'course_content':
+                course_sentiment -= 1
 
-    overall_sentiment = make_1_or_0(overall_sentiment)
-    trainer_sentiment = make_1_or_0(trainer_sentiment)
-    course_sentiment = make_1_or_0(course_sentiment)
-    venue_sentiment = make_1_or_0(venue_sentiment)
+            if aspect(sentence) == 'trainer':
+                trainer_sentiment -= 1
 
-    # Return a dictionary with sentiment aspects
+            if aspect(sentence) == 'venue':
+                venue_sentiment -= 1
 
-    return {'Overall'        : overall_sentiment,
-            'Course' : course_sentiment,
-            'Trainer'        : trainer_sentiment,
-            'Venue'          : venue_sentiment }
 
+    # Dictionary to collect sentiment aspects
+
+    review_sentiment = {'overall'        : overall_sentiment,
+                        'course_content' : course_sentiment,
+                        'trainer'        : trainer_sentiment,
+                        'venue'          : venue_sentiment }
+    return review_sentiment
 
 print("Classifier ready")
 
-# print(classify("The trainer and course was suberb but the food was terrible and disgusting. Happy good though"))
+# test = classify("It has been a fascinating subject to learn and very rewarding but I felt that the course content needed to be adjusted. No tea and coffee facilities either. The trainer was suberb. ")
+# print(test)
