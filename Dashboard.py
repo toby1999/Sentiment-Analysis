@@ -13,6 +13,9 @@ import plotly.graph_objs as go
 from plotly.offline import plot
 import plotly.express as px
 from classify import classify
+import dash
+import dash_table
+
 # `Load the dataframe`using Pickle
 pickle_df  = open("Data/Pickle/dataFrame.pickle", "rb")
 df  = pickle.load(pickle_df)
@@ -24,6 +27,11 @@ with open("Data/colours.txt", "r") as colours_file:
     for colour in colours_file:
         colours.append(colour.rstrip())
 colours_file.close()
+
+'''
+# Percentage reason for negative, issue type (Pie chart - Trainer, content, Venue)
+# Word Cloud for each course/trainer/venue
+'''
 
 def word_cloud():
     fig = go.Figure()
@@ -68,14 +76,17 @@ def word_cloud():
             opacity=1.0,
             layer="below",
             sizing="stretch",
-            source="https://raw.githubusercontent.com/michaelbabyn/plot_data/master/bridge.jpg")
+            source="")
     )
 
     # Configure other layout
     fig.update_layout(
         width=img_width * scale_factor,
         height=img_height * scale_factor,
-        margin={"l": 0, "r": 0, "t": 0, "b": 0},
+        margin={"l": 0, "r": 0, "t": 30, "b": 30, "pad": 50},
+        paper_bgcolor="white",
+        plot_bgcolor='white',
+        autosize=True,
     )
 
     return fig
@@ -95,18 +106,19 @@ def sentiment_pie(df, aspect):
 
 
     # Trace pie chart
-    trace = go.Pie(labels = ["Positive", "Negative"],
-                 values = [positive, negative],
+    trace = go.Pie(labels=["Positive", "Negative"],
+                 values=[positive, negative],
                  marker={"colors": ["#264e86", "#dcdee6"]},
-                 name = "Overall",
-                 hoverinfo = 'label',
-                 sort = False)
-    layout = dict(title="Average Sentiment", showlegend=True)
+                 name="Overall",
+                 hoverinfo='label',
+                 sort=False,
+                 )
+    layout = dict(showlegend=True)
     return dict(data=[trace], layout=layout)
 
 def review_frequency(df, n):
     # Number of reviews per month
-    today = datetime.date(2019,4,2) # temporary date for demo
+    today = datetime.date(2019,4,1) # temporary date for demo
     start_date = pd.Timestamp(today + relativedelta(days=-n))
 
     # months in daterange stored here
@@ -155,7 +167,9 @@ def word_cloud2():
     # Word cloud data
     random.choices(range(30), k=30)
     words = dir(go)[:30]
-    colors = [plotly.colors.DEFAULT_PLOTLY_COLORS[random.randrange(1, 10)] for i in range(30)]
+
+    #"CHECK THIS LINE ABOUT COLOURS!"colors = [plotly.colors.DEFAULT_PLOTLY_COLORS[random.randrange(1, 10)] for i in range(30)]
+
     weights = [random.randint(15, 35) for i in range(30)]
 
     trace = go.Scatter(x=[random.random() for i in range(30)],
@@ -171,6 +185,9 @@ def word_cloud2():
               'plot_bgcolor' : 'white'})
 
     return go.Figure(data=[trace], layout=layout)
+
+def choropleth_map2():
+    return None
 
 def choropleth_map():
     # Trace choropleth map
@@ -201,8 +218,8 @@ def choropleth_map():
     return dict(data=data, layout=layout)
 
 
-def trainer_sentiments(df, aspect, n):
-    today = datetime.date(2019,4,2) # temporary date for demo
+def trainer_sentiments(df, aspect, n, color):
+    today = datetime.date(2019,4,1) # temporary date for demo
     # Daterange only includes current month if 'today' is beyond 25th of the month
     if today.day > 25:
         today += datetime.timedelta(7)
@@ -275,27 +292,60 @@ def trainer_sentiments(df, aspect, n):
                                 paper_bgcolor="white",
                                 plot_bgcolor="white",
                                 xaxis_title="Month",
-                                yaxis_title="Sentiment score",
-                                )
+                                yaxis_title="Sentiment score")
     )
 
 
     x = len(colours)//len(sentiments)
     count = 0
     cols = []
+
     for col in range(len(sentiments)):
         cols.append(colours[count])
         count += x
 
-    for trainer, color in zip(sentiments, cols):
-        fig.add_trace(go.Scatter(x=months, y=trainer[0],
-                        mode='lines+markers',
-                        # line_shape='spline',
-                        connectgaps=True,
-                        marker=dict(color=color),
-                        name=trainer[1]))
+    if color ==1:
+        for trainer, color in zip(sentiments, cols):
+            fig.add_trace(go.Scatter(x=months, y=trainer[0],
+                            mode='lines+markers',
+                            # line_shape='spline',
+                            connectgaps=True,
+                            marker=dict(color=color),
+                            name=trainer[1]))
+    if color == 2:
+        cols2 = ['rgb(250, 230, 37)',
+                 'rgb(252, 200, 40)',
+                 'rgb(240, 128, 79)',
+                 'rgb(208, 77, 116)',
+                 'rgb(186, 53, 136)',
+                 'rgb(115, 1, 168)',
+                 'rgb(13, 7, 136)']
+        for trainer, color in zip(sentiments, cols2):
+            fig.add_trace(go.Scatter(x=months, y=trainer[0],
+                            mode='lines+markers',
+                            # line_shape='spline',
+                            connectgaps=True,
+                            marker=dict(color=color),
+                            name=trainer[1]))
 
     return fig
+
+def df_to_table(df):
+    df = df['Trainer'].unique().tolist()
+    df2 = [0.98,0.57,0.67,0.82,0.65,0.70,0.75,0.41,0.62]
+    data = {'Trainer' : df, 'Sentiment' : df2}
+
+
+def generate_table(dataframe, max_rows=26):
+    return html.Table(
+        # Header
+        [html.Tr([html.Th(col) for col in dataframe.columns]) ] +
+        # Body
+        [html.Tr([
+            html.Td(dataframe.iloc[i][col]) for col in dataframe.columns
+        ]) for i in range(min(len(dataframe), max_rows))]
+    )
+
 
 
 import dash
@@ -309,48 +359,97 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
 app.layout = html.Div(children=[
     html.Div([
-        # Sentiment pie charts
-        html.Div(
-            dcc.Graph(id="sentiment-pie",
-                figure=sentiment_pie(df, 'Course')
-            )
-        ),
-        # Dropdown
-        html.Div(
-            dcc.Dropdown(id='dropdown',
-                options = [
-                    {'label' : 'Overall', 'value' : 'Overall'},
-                    {'label' : 'Course',  'value' : 'Course' },
-                    {'label' : 'Trainer', 'value' : 'Trainer'},
-                    {'label' : 'Venue',   'value' : 'Venue'  }
-                ],
-                value='Overall'
-            )
-        ),
-        # Word cloud
+
+
+        # ROW 1
         html.Div([
-            dcc.Graph( id="wordCloud",
-                figure=word_cloud()
-            )
-        ]),
-        # Number of reviews
-        html.Div(
-            dcc.Graph(id="review frequency",
-                figure=review_frequency(df, 180)
-            )
-        ),
-        html.Div(
-            dcc.Graph(id="choropleth",
-                figure=choropleth_map()
-            )
-        ),
-        html.Div(
-            dcc.Graph(id="trainers",
-                figure=trainer_sentiments(df, 'Trainer', 6)
-            )
-        ),
-    ])
+            html.Div([
+                html.H3('Overall sentiment'),
+                dcc.Graph(id="sentiment-pie",
+                    figure=sentiment_pie(df, 'Course')
+                )
+            ], className="four columns"),
+            html.Div([
+                html.H3('Review frequency'),
+                dcc.Graph(id="review-frequency",
+                    figure=review_frequency(df, 180)
+                )
+            ], className="eight columns"),
+        ], className="row"),
+
+
+        # ROW 2
+        html.Div([
+            html.Div([
+                html.H3('Trainer sentiments'),
+                dcc.Graph(id="trainers",
+                    figure=trainer_sentiments(df, 'Trainer', 6, 1)
+                )
+            ], className="eight columns"),
+
+            html.Div([
+                html.H3('Venue sentiments'),
+                dcc.Graph(id="choropleth",
+                    figure=choropleth_map()
+                )
+            ], className="four columns"),
+        ], className="row"),
+
+
+        # ROW 3
+        html.Div([
+            html.Div([
+                html.H3('Course sentiments'),
+                dcc.Graph(id="courses",
+                    figure=trainer_sentiments(df, 'Course', 6, 2)
+                )
+            ], className="twelve columns"),
+
+            # html.Div([
+            #     html.H3('Venue sentiments'),
+            #     dcc.Graph(id="ven",
+            #         figure=choropleth_map()
+            #     )
+            # ], className="four columns"),
+        ], className="row"),
+
+
+
+        # ROW 4
+
+
+        # Dropdown
+        # html.Div(
+        #     dcc.Dropdown(id='dropdown',
+        #         options = [
+        #             {'label' : 'Overall', 'value' : 'Overall'},
+        #             {'label' : 'Course',  'value' : 'Course' },
+        #             {'label' : 'Trainer', 'value' : 'Trainer'},
+        #             {'label' : 'Venue',   'value' : 'Venue'  }
+        #         ],
+        #         value='Overall'
+        #     )
+        # ),
+
+
+        # Word cloud
+        # html.Div([
+        #     dcc.Graph( id="wordCloud",
+        #         figure=word_cloud()
+        #     )
+        # ]),
+
+
+
+        html.Div([
+            html.H3('All courses'),
+            generate_table(df, max_rows=10)
+
+        ], className="twelve columns")
+
+    ], style={"margin": "5%"},)
 ])
+
 
 
 # @app.callback(dash.dependencies.Output('sentiment-pie', 'figure'),
