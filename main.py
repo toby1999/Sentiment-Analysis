@@ -90,9 +90,9 @@ def showHead(n):
 reviews = getReviews(dataset)
 dataFrame = makeDataFrame(reviews)
 
-pickle_out = open("Data/Pickle/dataFrame.pickle", "wb")
-pickle.dump(dataFrame, pickle_out)
-pickle_out.close()
+# pickle_out = open("Data/Pickle/dataFrame.pickle", "wb")
+# pickle.dump(dataFrame, pickle_out)
+# pickle_out.close()
 
 from flask import escape
 
