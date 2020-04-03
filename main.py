@@ -119,12 +119,10 @@ http://flask.pocoo.org/docs/1.0/api/#flask.Flask.make_response
         else:
             raise ValueError("JSON is invalid, or missing a 'name' property")
     elif content_type == 'application/octet-stream':
-        name =
-request.data
+        name = request.data
 
     elif content_type == 'text/plain':
-        name =
-request.data
+        name = request.data
 
     elif content_type == 'application/x-www-form-urlencoded':
         name = request.form.get('name')
