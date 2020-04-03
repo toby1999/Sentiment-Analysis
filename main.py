@@ -133,4 +133,4 @@ http://flask.pocoo.org/docs/1.0/api/#flask.Flask.make_response
 
 #showHead(15)
 
-showWordFreq(10)
+# showWordFreq(10)
