@@ -1,6 +1,6 @@
 from flask import escape
 
-def hello_world(request):
+def helloWorld(request):
     """ Responds to an HTTP request using data from the request body parsed
     according to the "content-type" header.
     Args:
@@ -33,5 +33,3 @@ http://flask.pocoo.org/docs/1.0/api/#flask.Flask.make_response
     else:
         raise ValueError("Unknown content type: {}".format(content_type))
     return 'Hello world {}!'.format(escape(name))
-
-print("Hello world")
