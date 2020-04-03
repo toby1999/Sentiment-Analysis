@@ -97,7 +97,7 @@ dataFrame = makeDataFrame(reviews)
 
 from flask import escape
 
-def hello_world(request):
+def helloWorld(request):
     """ Responds to an HTTP request using data from the request body parsed
     according to the "content-type" header.
     Args:
