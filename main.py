@@ -2,6 +2,7 @@ print("Loading modules")
 import pandas as pd
 import word_freq
 import pickle
+import nltk
 from datetime import datetime
 from tabulate import tabulate
 from nltk.corpus import stopwords
