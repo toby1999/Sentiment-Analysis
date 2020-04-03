@@ -8,7 +8,7 @@ from tabulate import tabulate
 from nltk.corpus import stopwords
 
 pd.set_option('display.max_columns', None)
-nltk.download()
+# nltk.download()
 print("Loading spreadsheet")
 spreadsheet = pd.read_excel ('Data/coursecheck_data.xlsx') # Open spreadsheet
 dataset = pd.DataFrame(spreadsheet,
