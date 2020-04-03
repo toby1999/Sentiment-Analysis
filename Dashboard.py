@@ -15,6 +15,7 @@ import plotly.express as px
 from classify import classify
 import dash
 import dash_table
+import operator
 
 # `Load the dataframe`using Pickle
 pickle_df  = open("Data/Pickle/dataFrame.pickle", "rb")
@@ -29,9 +30,9 @@ with open("Data/colours.txt", "r") as colours_file:
 colours_file.close()
 
 '''
-# Percentage reason for negative, issue type (Pie chart - Trainer, content, Venue)
 # Word Cloud for each course/trainer/venue
 '''
+
 
 def word_cloud():
     fig = go.Figure()
@@ -90,6 +91,35 @@ def word_cloud():
     )
 
     return fig
+
+def aspect_pie(df):
+
+    sentiments = {'Course':0, 'Trainer':0, 'Venue':0}
+
+    for review in df.iterrows():
+        sentiment = classify(review[1][4])
+        if sentiment['Course'] == -1:
+            sentiments['Course'] += 1
+        if sentiment['Trainer'] == -1:
+            sentiments['Trainer'] += 1
+        if sentiment['Venue'] == -1:
+            sentiments['Venue'] += 1
+
+    sentiments = sorted(sentiments.items(), key=operator.itemgetter(1), reverse=True)
+
+    # Trace pie chart
+    trace = go.Pie(labels=[sentiments[0][0], sentiments[1][0], sentiments[2][0]],
+                   values=[sentiments[0][1], sentiments[1][1], sentiments[2][1]],
+                   name="Overall",
+                   hoverinfo='label',
+                   marker={"colors": ["rgb(178, 25, 43)",
+                                       "rgb(230, 130, 103",
+                                       "rgb(249, 196, 169)"]},
+                   sort=True)
+
+    layout = dict(showlegend=True)
+    return dict(data=[trace], layout=layout)
+
 
 
 def sentiment_pie(df, aspect):
@@ -150,44 +180,41 @@ def review_frequency(df, n):
 
     layout = go.Layout(
         autosize=True,
-        xaxis=dict(showgrid=False, showticklabels=False),
+        xaxis=dict(showgrid=False, tickformat='%Y-%m-%d',tickmode="auto", nticks=6, showticklabels=False),
         xaxis_title="Date",
         yaxis_title="Number of reviews",
         margin=dict(l=33, r=25, b=40, t=50, pad=4),
         paper_bgcolor="white",
         plot_bgcolor="white",
-        title_text="Review frequency over the last " + str(n) + " days",
+        # title_text="Review frequency over the last " + str(n) + " days",
     )
     return {"data": data, "layout": layout}
 
 
-def word_cloud2():
-    # Trace word cloud
-
-    # Word cloud data
-    random.choices(range(30), k=30)
-    words = dir(go)[:30]
-
-    #"CHECK THIS LINE ABOUT COLOURS!"colors = [plotly.colors.DEFAULT_PLOTLY_COLORS[random.randrange(1, 10)] for i in range(30)]
-
-    weights = [random.randint(15, 35) for i in range(30)]
-
-    trace = go.Scatter(x=[random.random() for i in range(30)],
-                           y=[random.random() for i in range(30)],
-                           mode='text',
-                           text=words,
-                           marker={'opacity': 0.3},
-                           textfont={'size': weights, 'color': colors})
-
-    layout = go.Layout(
-             {'xaxis': {'showgrid': False, 'showticklabels': False, 'zeroline': False},
-              'yaxis': {'showgrid': False, 'showticklabels': False, 'zeroline': False},
-              'plot_bgcolor' : 'white'})
-
-    return go.Figure(data=[trace], layout=layout)
-
-def choropleth_map2():
-    return None
+# def word_cloud2():
+#     # Trace word cloud
+#
+#     # Word cloud data
+#     random.choices(range(30), k=30)
+#     words = dir(go)[:30]
+#
+#     #"CHECK THIS LINE ABOUT COLOURS!"colors = [plotly.colors.DEFAULT_PLOTLY_COLORS[random.randrange(1, 10)] for i in range(30)]
+#
+#     weights = [random.randint(15, 35) for i in range(30)]
+#
+#     trace = go.Scatter(x=[random.random() for i in range(30)],
+#                            y=[random.random() for i in range(30)],
+#                            mode='text',
+#                            text=words,
+#                            marker={'opacity': 0.3},
+#                            textfont={'size': weights, 'color': colors})
+#
+#     layout = go.Layout(
+#              {'xaxis': {'showgrid': False, 'showticklabels': False, 'zeroline': False},
+#               'yaxis': {'showgrid': False, 'showticklabels': False, 'zeroline': False},
+#               'plot_bgcolor' : 'white'})
+#
+#     return go.Figure(data=[trace], layout=layout)
 
 def choropleth_map():
     # Trace choropleth map
@@ -360,35 +387,41 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 app.layout = html.Div(children=[
     html.Div([
 
-
+        html.Div([html.H1('Dashboard')]),
         # ROW 1
         html.Div([
             html.Div([
-                html.H3('Overall sentiment'),
+                html.H4('Overall sentiment'),
                 dcc.Graph(id="sentiment-pie",
                     figure=sentiment_pie(df, 'Course')
                 )
             ], className="four columns"),
             html.Div([
-                html.H3('Review frequency'),
+                html.H4('Reasons for negative feedback'),
+                dcc.Graph(id="negative-pie2",
+                    figure=aspect_pie(df)
+                )
+            ], className="four columns"),
+            html.Div([
+                html.H4('Review frequency'),
                 dcc.Graph(id="review-frequency",
                     figure=review_frequency(df, 180)
                 )
-            ], className="eight columns"),
+            ], className="four columns"),
         ], className="row"),
 
 
         # ROW 2
         html.Div([
             html.Div([
-                html.H3('Trainer sentiments'),
+                html.H4('Trainer sentiments'),
                 dcc.Graph(id="trainers",
                     figure=trainer_sentiments(df, 'Trainer', 6, 1)
                 )
             ], className="eight columns"),
 
             html.Div([
-                html.H3('Venue sentiments'),
+                html.H4('Venue sentiments'),
                 dcc.Graph(id="choropleth",
                     figure=choropleth_map()
                 )
@@ -397,26 +430,31 @@ app.layout = html.Div(children=[
 
 
         # ROW 3
+
         html.Div([
-            html.Div([
-                html.H3('Course sentiments'),
-                dcc.Graph(id="courses",
-                    figure=trainer_sentiments(df, 'Course', 6, 2)
-                )
-            ], className="twelve columns"),
-
-            # html.Div([
-            #     html.H3('Venue sentiments'),
-            #     dcc.Graph(id="ven",
-            #         figure=choropleth_map()
-            #     )
-            # ], className="four columns"),
-        ], className="row"),
-
-
+            html.H4('Course sentiments'),
+            dcc.Graph(id="courses",
+                figure=trainer_sentiments(df, 'Course', 6, 2)
+            )
+        ]),
 
         # ROW 4
+        # html.Div([
+        #     html.Div([
+        #         html.H3('Reasons for negative feedback'),
+        #         dcc.Graph(id="negative-pie",
+        #             figure=aspect_pie(df)
+        #         )
+        #     ], className="six columns"),
 
+
+            # html.Div([
+            #     html.H3('Sunburst'),
+            #     dcc.Graph(id="sunburst",
+            #         figure=sunburst()
+            #     )
+            # ], className="six columns"),
+        # ]),
 
         # Dropdown
         # html.Div(

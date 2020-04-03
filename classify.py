@@ -119,7 +119,7 @@ def classify(string):
     # Return a dictionary with sentiment aspects
 
     return {'Overall'        : overall_sentiment,
-            'Course' : course_sentiment,
+            'Course'         : course_sentiment,
             'Trainer'        : trainer_sentiment,
             'Venue'          : venue_sentiment }
 
