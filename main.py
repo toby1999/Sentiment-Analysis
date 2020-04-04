@@ -2,6 +2,7 @@
 import random
 import pickle
 import plotly
+import nltk
 import calendar
 import unicodedata
 from datetime import date, timedelta
@@ -16,7 +17,7 @@ from classify import classify
 import dash
 import dash_table
 import operator
-
+nltk.download('punkt')
 # `Load the dataframe`using Pickle
 pickle_df  = open("Data/Pickle/dataFrame.pickle", "rb")
 df  = pickle.load(pickle_df)
