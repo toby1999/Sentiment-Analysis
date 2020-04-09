@@ -17,7 +17,7 @@ from classify import classify
 import dash
 import dash_table
 import operator
-nltk.download('punkt')
+# nltk.download('punkt')
 # `Load the dataframe`using Pickle
 pickle_df  = open("Data/Pickle/dataFrame.pickle", "rb")
 df  = pickle.load(pickle_df)
@@ -93,18 +93,35 @@ def word_cloud():
 
     return fig
 
-def aspect_pie(df):
+def aspect_pie(df, polarity):
 
     sentiments = {'Course':0, 'Trainer':0, 'Venue':0}
 
-    for review in df.iterrows():
-        sentiment = classify(review[1][4])
-        if sentiment['Course'] == -1:
-            sentiments['Course'] += 1
-        if sentiment['Trainer'] == -1:
-            sentiments['Trainer'] += 1
-        if sentiment['Venue'] == -1:
-            sentiments['Venue'] += 1
+    if polarity == 'positive':
+        colorscheme = {"colors": ["rgb(0, 109, 44)",
+                                  "rgb(75, 191, 106)",
+                                  "rgb(161, 217, 155)"]}
+        for review in df.iterrows():
+            sentiment = classify(review[1][4])
+            if sentiment['Course'] == 1:
+                sentiments['Course'] += 1
+            if sentiment['Trainer'] == 1:
+                sentiments['Trainer'] += 1
+            if sentiment['Venue'] == 1:
+                sentiments['Venue'] += 1
+
+    if polarity == 'negative':
+        colorscheme = {"colors": ["rgb(178, 25, 43)",
+                                  "rgb(230, 130, 103",
+                                  "rgb(249, 196, 169)"]}
+        for review in df.iterrows():
+            sentiment = classify(review[1][4])
+            if sentiment['Course'] == -1:
+                sentiments['Course'] += 1
+            if sentiment['Trainer'] == -1:
+                sentiments['Trainer'] += 1
+            if sentiment['Venue'] == -1:
+                sentiments['Venue'] += 1
 
     sentiments = sorted(sentiments.items(), key=operator.itemgetter(1), reverse=True)
 
@@ -113,12 +130,10 @@ def aspect_pie(df):
                    values=[sentiments[0][1], sentiments[1][1], sentiments[2][1]],
                    name="Overall",
                    hoverinfo='label',
-                   marker={"colors": ["rgb(178, 25, 43)",
-                                       "rgb(230, 130, 103",
-                                       "rgb(249, 196, 169)"]},
+                   marker=colorscheme,
                    sort=True)
 
-    layout = dict(showlegend=True)
+    layout = dict(showlegend=True, margin={'t':0, 'b':0})
     return dict(data=[trace], layout=layout)
 
 
@@ -144,7 +159,8 @@ def sentiment_pie(df, aspect):
                  hoverinfo='label',
                  sort=False,
                  )
-    layout = dict(showlegend=True)
+    layout = dict(showlegend=True, margin={'t':0, 'b':0})
+    # paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
     return dict(data=[trace], layout=layout)
 
 def review_frequency(df, n):
@@ -189,7 +205,10 @@ def review_frequency(df, n):
         plot_bgcolor="white",
         # title_text="Review frequency over the last " + str(n) + " days",
     )
-    return {"data": data, "layout": layout}
+
+    fig = {"data" : data, "layout" : layout}
+
+    return fig
 
 
 # def word_cloud2():
@@ -297,7 +316,7 @@ def trainer_sentiments(df, aspect, n, color):
                 sentiment_values.append(None)
             else:
                 avg_sentiment = sum(review_sentiments)/len(review_sentiments)
-                sentiment_values.append((avg_sentiment+1)/2)
+                sentiment_values.append("%.2f" % ((avg_sentiment+1)/2))
         # Append monthly sentiment values for each trainer to list of 'sentiment_values'
         trainer_sentiments.append((sentiment_values, trainer_list[i].strip()))
 
@@ -358,10 +377,29 @@ def trainer_sentiments(df, aspect, n, color):
 
     return fig
 
-def df_to_table(df):
-    df = df['Trainer'].unique().tolist()
-    df2 = [0.98,0.57,0.67,0.82,0.65,0.70,0.75,0.41,0.62]
-    data = {'Trainer' : df, 'Sentiment' : df2}
+
+
+def df_to_table(df, aspect):
+    item_list = df[aspect].unique().tolist()
+    sentiment_values = []
+    for item in item_list:
+        review_sentiments = []
+        new_df = df[(df[aspect] == item)]
+        for review in new_df.iterrows():
+            sentiment = classify(review[1][4])[aspect]
+            if sentiment == 0: continue
+            review_sentiments.append(sentiment)
+        if len(review_sentiments) == 0:
+            sentiment_values.append(None)
+        else:
+            avg_sentiment = sum(review_sentiments)/len(review_sentiments)
+            sentiment_values.append("%.2f" % ((avg_sentiment+1)/2))
+
+
+    data = {aspect : item_list, 'Sentiment' : sentiment_values}
+    df = pd.DataFrame(data, columns=[aspect,'Sentiment'])
+    df.sort_values(by=['Sentiment'], inplace=True, ascending=False,kind='quicksort')
+    return df
 
 
 def generate_table(dataframe, max_rows=26):
@@ -377,6 +415,7 @@ def generate_table(dataframe, max_rows=26):
 
 
 import dash
+import dash_daq as daq
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Output, Input # For callbacks
@@ -385,117 +424,267 @@ external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
-app.layout = html.Div(children=[
-    html.Div([
+main_container = {
+    'background': '#f5f5f5',
+    'margin':'-10px',
+    'margin-top':'-20px',
+}
 
-        html.Div([html.H1('Dashboard')]),
-        # ROW 1
-        html.Div([
-            html.Div([
-                html.H4('Overall sentiment'),
-                dcc.Graph(id="sentiment-pie",
-                    figure=sentiment_pie(df, 'Course')
-                )
-            ], className="four columns"),
-            html.Div([
-                html.H4('Reasons for negative feedback'),
-                dcc.Graph(id="negative-pie2",
-                    figure=aspect_pie(df)
-                )
-            ], className="four columns"),
-            html.Div([
-                html.H4('Review frequency'),
-                dcc.Graph(id="review-frequency",
-                    figure=review_frequency(df, 180)
-                )
-            ], className="four columns"),
-        ], className="row"),
+dashboard_container = {
+    'margin': '5%',
+    'margin-top': '20px',
+    'margin-bottom': '20px',
+}
 
+pie_container = {
+    "border-radius" : "5px",
+    "background-color" : "white",
+    "padding" : "1rem",
+    "position" : "relative",
+    "border" : "1px solid #f1f1f1",
+}
 
-        # ROW 2
-        html.Div([
-            html.Div([
-                html.H4('Trainer sentiments'),
-                dcc.Graph(id="trainers",
-                    figure=trainer_sentiments(df, 'Trainer', 6, 1)
-                )
-            ], className="eight columns"),
-
-            html.Div([
-                html.H4('Venue sentiments'),
-                dcc.Graph(id="choropleth",
-                    figure=choropleth_map()
-                )
-            ], className="four columns"),
-        ], className="row"),
+header = {
+    "background-color" : "rgb(30, 97, 133)",
+    'text': 'white',
+    'width' : '100%',
+    'height' : '93px',
+    "padding" : "1rem",
+}
 
 
-        # ROW 3
+app.layout = html.Div(style=main_container, children=[
 
-        html.Div([
-            html.H4('Course sentiments'),
-            dcc.Graph(id="courses",
-                figure=trainer_sentiments(df, 'Course', 6, 2)
+    # Header
+    html.Div(
+        style=header,
+        children=[
+            html.Div(
+                style=dashboard_container,
+                children=[
+                    html.Div(
+                        className='six columns',
+                        children=[
+                            html.Img(
+                                src='https://www.coursecheck.com/assets/img/coursecheck.svg',
+                                style={'margin-left' : '-10px',
+                                       'width' : '230px'
+                                }
+                            )
+                        ]
+                    ),
+                    html.Div(
+                        className='six columns',
+                        children=[
+                            html.H3(
+                                children='Sentiment Analysis Dashboard',
+                                style={
+                                    'textAlign': 'right',
+                                    'color': 'white',
+                                    'margin-top' : '13px',
+                                    'margin-right' : '9px',
+                                }
+                            )
+                        ]
+                    )
+                ]
             )
-        ]),
+        ]
+    ),
 
-        # ROW 4
-        # html.Div([
-        #     html.Div([
-        #         html.H3('Reasons for negative feedback'),
-        #         dcc.Graph(id="negative-pie",
-        #             figure=aspect_pie(df)
-        #         )
-        #     ], className="six columns"),
+    # Main Dashboard
+    html.Div(
+        style=dashboard_container,
+        children=[
+            # Dropdown
+            html.Div(
+                id="dropdown1",
+                children=[
+                    dcc.Dropdown(
+                        id='sentiment-dropdown',
+                        value='Overall',
+                        style={'width': '110px'},
+                        clearable=False,
+                        options = [
+                            {'label' : 'Overall', 'value' : 'Overall'},
+                            {'label' : 'Course',  'value' : 'Course' },
+                            {'label' : 'Trainer', 'value' : 'Trainer'},
+                            {'label' : 'Venue',   'value' : 'Venue'  }
+                        ]
+                    )
+                ]
+            ),
+            html.Br(),
+
+            # ROW 1
+            html.Div(
+                className="row",
+                children=[
+                    # Pie chart 1
+                    html.Div(
+                        id="pie1",
+                        className="four columns",
+                        style=pie_container,
+                        children=[
+                            html.P(id="pie1-title", children="Overall sentiment"),
+                            dcc.Graph(id="overall-pie",
+                                figure=sentiment_pie(df, 'Course'),
+                                config={'displayModeBar': False}
+                            )
+                        ]
+                    ),
+                    # Pie chart 2
+                    html.Div(
+                        className="four columns",
+                        style=pie_container,
+                        children=[
+                            html.P("Reasons for positive feedback"),
+                            dcc.Graph(id="positive-pie",
+                                figure=aspect_pie(df, 'positive'),
+                                config={'displayModeBar': False}
+                            )
+                        ]
+                    ),
+                    # Pie chart 3
+                    html.Div(
+                        className="four columns",
+                        style=pie_container,
+                        children=[
+                            html.P("Reasons for negative feedback"),
+                            dcc.Graph(id="negative-pie",
+                                figure=aspect_pie(df, 'negative'),
+                                config={'displayModeBar': False}
+                            )
+                        ]
+                    )
+                ]
+            ),
 
 
+            # ROW 2
+            html.Div([
+                html.Div([
+                    html.H4('Trainer sentiments'),
+                    dcc.Dropdown(
+                        id='trainer-dropdown',
+                        value='Last quarter',
+                        style={'width': '200px'},
+                        clearable=False,
+                        options = [
+                            {'label' : 'Last quarter', 'value' : '3'},
+                            {'label' : 'Last 2 quarters',  'value' : '6' },
+                            {'label' : 'Last 3 quarters', 'value' : '9'},
+                            {'label' : 'Last 4 quarters',   'value' : '12'  }
+                        ]
+                    ),
+                    dcc.Graph(
+                        id="trainers",
+                        figure=trainer_sentiments(df, 'Trainer', 6, 1)
+                    )
+                ], className="eight columns"),
+                html.Div([
+                    html.H4('Review frequency'),
+                    dcc.Graph(id="review-frequency",
+                        figure=review_frequency(df, 180)
+                    )
+                ], className="four columns"),
+
+                # html.Div([
+                #     html.H4('Venue sentiments'),
+                #     dcc.Graph(id="choropleth",
+                #         figure=choropleth_map()
+                #     )
+                # ], className="four columns"),
+            ], className="row"),
+
+
+            # ROW 3
+
+            html.Div([
+                html.H4('Course sentiments'),
+                dcc.Graph(id="courses",
+                    figure=trainer_sentiments(df, 'Course', 12, 2)
+                )
+            ]),
+
+            # ROW 4
             # html.Div([
-            #     html.H3('Sunburst'),
-            #     dcc.Graph(id="sunburst",
-            #         figure=sunburst()
+            #     html.Div([
+            #         html.H3('Reasons for negative feedback'),
+            #         dcc.Graph(id="negative-pie",
+            #             figure=aspect_pie(df)
+            #         )
+            #     ], className="six columns"),
+
+
+                # html.Div([
+                #     html.H3('Sunburst'),
+                #     dcc.Graph(id="sunburst",
+                #         figure=sunburst()
+                #     )
+                # ], className="six columns"),
+            # ]),
+
+            # Dropdown
+            # html.Div(
+            #     dcc.Dropdown(id='dropdown',
+            #         options = [
+            #             {'label' : 'Overall', 'value' : 'Overall'},
+            #             {'label' : 'Course',  'value' : 'Course' },
+            #             {'label' : 'Trainer', 'value' : 'Trainer'},
+            #             {'label' : 'Venue',   'value' : 'Venue'  }
+            #         ],
+            #         value='Overall'
             #     )
-            # ], className="six columns"),
-        # ]),
-
-        # Dropdown
-        # html.Div(
-        #     dcc.Dropdown(id='dropdown',
-        #         options = [
-        #             {'label' : 'Overall', 'value' : 'Overall'},
-        #             {'label' : 'Course',  'value' : 'Course' },
-        #             {'label' : 'Trainer', 'value' : 'Trainer'},
-        #             {'label' : 'Venue',   'value' : 'Venue'  }
-        #         ],
-        #         value='Overall'
-        #     )
-        # ),
+            # ),
 
 
-        # Word cloud
-        # html.Div([
-        #     dcc.Graph( id="wordCloud",
-        #         figure=word_cloud()
-        #     )
-        # ]),
+            # Word cloud
+            # html.Div([
+            #     dcc.Graph( id="wordCloud",
+            #         figure=word_cloud()
+            #     )
+            # ]),
 
 
 
-        html.Div([
-            html.H3('All courses'),
-            generate_table(df, max_rows=10)
+            html.Div([
+                html.H3('All courses'),
+                generate_table(df_to_table(df, 'Trainer'))
 
-        ], className="twelve columns")
+            ], className="twelve columns")
 
-    ], style={"margin": "5%"},)
+    ])
 ])
 
+# update pie chart figure based on dropdown's value
+@app.callback(
+    Output("overall-pie", "figure"),
+    [Input("sentiment-dropdown", "value")],
+)
+def overall_callback(value):
+    aspect=value
+    return sentiment_pie(df, aspect)
+
+@app.callback(
+    Output("pie1-title", "children"),
+    [Input("sentiment-dropdown", "value")],
+)
+def pie1_callback(value):
+    title = value + " sentiment"
+    return title
 
 
-# @app.callback(dash.dependencies.Output('sentiment-pie', 'figure'),
-#              [dash.dependencies.Input('dropdown', "value")])
+#
+# @app.callback(
+#     Output("trainers", "figure"),
+#     [Input("trainer-dropdown", "value")],
+# )
+# def trainer_callback(value):
+#     n = value
+#     return trainer_sentiments(df, 'Trainer', n, 1)
+#
 
-# def updateFig(option): # passing in option from dropdown
-#     return "Hello"
 
 print("Success")
 if __name__ == '__main__':
