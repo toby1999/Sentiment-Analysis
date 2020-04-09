@@ -724,4 +724,6 @@ http://flask.pocoo.org/docs/1.0/api/#flask.Flask.make_response
         name = request.form.get('name')
     else:
         raise ValueError("Unknown content type: {}".format(content_type))
-    return 'Hello world {}!'.format(escape(name))
+    
+    return app.index()
+    
