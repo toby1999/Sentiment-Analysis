@@ -3,6 +3,7 @@ import pandas as pd
 import word_freq
 import pickle
 import nltk
+from classify import classify
 from datetime import datetime
 from tabulate import tabulate
 from nltk.corpus import stopwords
@@ -58,7 +59,7 @@ def makeDataFrame(reviews):
     Creates the dataframe
     '''
     print("Loading DataFrame")
-    dFrame = pd.DataFrame(data = reviews,
+    df = pd.DataFrame(data = reviews,
                           columns = ['Training company',
                                      'Course',
                                      'Trainer',
@@ -66,8 +67,28 @@ def makeDataFrame(reviews):
                                      'Review',
                                      'Score',
                                      'Date'])
-    print("DataFrame ready (" +str(len(dFrame.index)), "reviews)")
-    return dFrame
+    print("DataFrame ready ({} reviews)".format(str(len(df.index))))
+    return df
+
+
+def getSentiments(df):
+    sentiments_overall = []
+    sentiments_course  = []
+    sentiments_trainer = []
+    sentiments_venue   = []
+    for review in df.iterrows():
+        sentiment = classify(review[1][4])
+        sentiments_overall.append(sentiment['Overall'])
+        sentiments_course .append(sentiment['Course' ])
+        sentiments_trainer.append(sentiment['Trainer'])
+        sentiments_venue  .append(sentiment['Venue' ])
+    return sentiments_overall, sentiments_course, sentiments_trainer, sentiments_venue
+
+def dump(df):
+    print("Serializing dataFrame...")
+    pickle_out = open("Data/Pickle/dataFrame.pickle", "wb")
+    pickle.dump(df, pickle_out)
+    pickle_out.close()
 
 
 def showWordFreq(n_most_common):
@@ -83,54 +104,20 @@ def showWordFreq(n_most_common):
                           showindex = "always") + "\n")
 
 
-def showHead(n):
-    # Prints the first n reviews in the dataframe
-    print(dataFrame.head(n))
-
 
 reviews = getReviews(dataset)
-dataFrame = makeDataFrame(reviews)
+df = makeDataFrame(reviews)
 
-# pickle_out = open("Data/Pickle/dataFrame.pickle", "wb")
-# pickle.dump(dataFrame, pickle_out)
-# pickle_out.close()
+print("Classifying reviews...")
+sentiment_overall, sentiment_course, sentiment_trainer, sentiment_venue = getSentiments(df)
 
-from flask import escape
+df['Sentiment overall'] = sentiment_overall
+df['Sentiment course'] = sentiment_course
+df['Sentiment trainer'] = sentiment_trainer
+df['Sentiment venue'] = sentiment_venue
 
-def helloWorld(request):
-    """ Responds to an HTTP request using data from the request body parsed
-    according to the "content-type" header.
-    Args:
-        request (flask.Request): The request object.
-        <
-http://flask.pocoo.org/docs/1.0/api/#flask.Request
->
-    Returns:
-        The response text, or any set of values that can be turned into a
-        Response object using `make_response`
-        <
-http://flask.pocoo.org/docs/1.0/api/#flask.Flask.make_response
->.
-    """
-    content_type = request.headers['content-type']
-    if content_type == 'application/json':
-        request_json = request.get_json(silent=True)
-        if request_json and 'name' in request_json:
-            name = request_json['name']
-        else:
-            raise ValueError("JSON is invalid, or missing a 'name' property")
-    elif content_type == 'application/octet-stream':
-        name = request.data
-
-    elif content_type == 'text/plain':
-        name = request.data
-
-    elif content_type == 'application/x-www-form-urlencoded':
-        name = request.form.get('name')
-    else:
-        raise ValueError("Unknown content type: {}".format(content_type))
-    return 'Hello world {}!'.format(escape(name))
-
-#showHead(15)
-
+# dump(df)
+# print(df.head())
 # showWordFreq(10)
+
+print("Done")
