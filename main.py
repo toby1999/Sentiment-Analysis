@@ -534,6 +534,7 @@ main_container = {
     'margin-top':'-20px',
 }
 
+server = app.server
 
 app.layout = html.Div(className="container", children=[
 
