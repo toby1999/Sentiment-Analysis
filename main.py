@@ -1,21 +1,19 @@
 # -*- coding: utf-8 -*-
+
 # System libraries
 import random
 import pickle
+import operator
 import calendar
 import datetime
-# from datetime import date, timedelta
-
-import nltk
-
-import unicodedata
-
-
-import pandas as pd
 from dateutil import rrule
 from dateutil.relativedelta import relativedelta
+import pandas as pd
+
+# NLP libraries
+import nltk
 from classify import classify
-import operator
+
 
 # Plotly libraries
 import plotly
@@ -29,7 +27,6 @@ nltk.download('punkt')
 VALID_USERNAME_PASSWORD_PAIRS = {
     'hello': 'world'
 }
-
 
 # `Load the dataframe`using Pickle
 pickle_df  = open("Data/Pickle/dataFrame.pickle", "rb")
