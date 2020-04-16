@@ -521,9 +521,7 @@ from dash.dependencies import Output, Input # For callbacks
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
-# app = dash.Dash(__name__)
-
-app = dash.Dash(serve_locally = False)
+app = dash.Dash(__name__, serve_locally = False)
 
 auth = dash_auth.BasicAuth(
     app,
