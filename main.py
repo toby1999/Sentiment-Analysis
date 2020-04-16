@@ -476,41 +476,41 @@ def trainer_sentiments(df, aspect, n, color):
 
     return fig
 
-
-
-def df_to_table(df, aspect):
-    item_list = df[aspect].unique().tolist()
-    sentiment_values = []
-    for item in item_list:
-        review_sentiments = []
-        new_df = df[(df[aspect] == item)]
-        for review in new_df.iterrows():
-            sentiment = classify(review[1][4])[aspect]
-            if sentiment == 0: continue
-            review_sentiments.append(sentiment)
-        if len(review_sentiments) == 0:
-            sentiment_values.append(None)
-        else:
-            avg_sentiment = sum(review_sentiments)/len(review_sentiments)
-            sentiment_values.append("%.2f" % ((avg_sentiment+1)/2))
-
-
-    data = {aspect : item_list, 'Sentiment' : sentiment_values}
-    df = pd.DataFrame(data, columns=[aspect,'Sentiment'])
-    df.sort_values(by=['Sentiment'], inplace=True, ascending=False,kind='quicksort')
-    return df
-
-
-def generate_table(dataframe, max_rows=26):
-    return html.Table(
-        # Header
-        [html.Tr([html.Th(col) for col in dataframe.columns]) ] +
-        # Body
-        [html.Tr([
-            html.Td(dataframe.iloc[i][col]) for col in dataframe.columns
-        ]) for i in range(min(len(dataframe), max_rows))]
-    )
-
+#
+#
+# def df_to_table(df, aspect):
+#     item_list = df[aspect].unique().tolist()
+#     sentiment_values = []
+#     for item in item_list:
+#         review_sentiments = []
+#         new_df = df[(df[aspect] == item)]
+#         for review in new_df.iterrows():
+#             sentiment = classify(review[1][4])[aspect]
+#             if sentiment == 0: continue
+#             review_sentiments.append(sentiment)
+#         if len(review_sentiments) == 0:
+#             sentiment_values.append(None)
+#         else:
+#             avg_sentiment = sum(review_sentiments)/len(review_sentiments)
+#             sentiment_values.append("%.2f" % ((avg_sentiment+1)/2))
+#
+#
+#     data = {aspect : item_list, 'Sentiment' : sentiment_values}
+#     df = pd.DataFrame(data, columns=[aspect,'Sentiment'])
+#     df.sort_values(by=['Sentiment'], inplace=True, ascending=False,kind='quicksort')
+#     return df
+#
+#
+# def generate_table(dataframe, max_rows=26):
+#     return html.Table(
+#         # Header
+#         [html.Tr([html.Th(col) for col in dataframe.columns]) ] +
+#         # Body
+#         [html.Tr([
+#             html.Td(dataframe.iloc[i][col]) for col in dataframe.columns
+#         ]) for i in range(min(len(dataframe), max_rows))]
+#     )
+#
 
 
 import dash
@@ -844,11 +844,11 @@ app.layout = html.Div(className="container", children=[
 
 
 
-            html.Div([
-                html.H3('All courses'),
-                generate_table(df_to_table(df, 'Trainer'))
-
-            ], className="twelve columns")
+            # html.Div([
+            #     html.H3('All courses'),
+            #     generate_table(df_to_table(df, 'Trainer'))
+            #
+            # ], className="twelve columns")
 
     ])
 ])
