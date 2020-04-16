@@ -1,23 +1,36 @@
 # -*- coding: utf-8 -*-
+# System libraries
 import random
 import pickle
-import plotly
-import nltk
 import calendar
-import unicodedata
-from datetime import date, timedelta
 import datetime
+# from datetime import date, timedelta
+
+import nltk
+
+import unicodedata
+
+
 import pandas as pd
 from dateutil import rrule
 from dateutil.relativedelta import relativedelta
-import plotly.graph_objs as go
-from plotly.offline import plot
-import plotly.express as px
 from classify import classify
+import operator
+
+# Plotly libraries
+import plotly
 import dash
 import dash_table
-import operator
+import dash_auth
+import plotly.graph_objs as go
+import plotly.express as px
 nltk.download('punkt')
+
+VALID_USERNAME_PASSWORD_PAIRS = {
+    'hello': 'world'
+}
+
+
 # `Load the dataframe`using Pickle
 pickle_df  = open("Data/Pickle/dataFrame.pickle", "rb")
 df  = pickle.load(pickle_df)
@@ -513,6 +526,10 @@ external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 app = dash.Dash(__name__)
 
+auth = dash_auth.BasicAuth(
+    app,
+    VALID_USERNAME_PASSWORD_PAIRS
+)
 
 main_container = {
     'background': '#f5f5f5',
