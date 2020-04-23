@@ -25,7 +25,7 @@ import plotly.express as px
 nltk.download('punkt')
 
 VALID_USERNAME_PASSWORD_PAIRS = {
-    'hello': 'world'
+    'admin': 'password'
 }
 
 # `Load the dataframe`using Pickle
@@ -533,8 +533,6 @@ main_container = {
     'margin':'-10px',
     'margin-top':'-20px',
 }
-
-server = app.server
 
 app.layout = html.Div(className="container", children=[
 
