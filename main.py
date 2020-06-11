@@ -23,21 +23,7 @@ df  = pickle.load(pickle_df)
 
 df = df[(df["Training company"] == "Entertainment 720")]
 
-def get_averages(df):
 
-    averages = {}
-   
-    print(df.head())
-    positive = 0
-    negative = 0
-    for review in df.iterrows():
-            if review[1][8] == 1:
-                positive += 1
-            if review[1][8] == -1:
-                negative += 1
-    print(positive, negative)
-
-# get_averages(df)
 
 def course_list(df):
     '''
@@ -46,7 +32,7 @@ def course_list(df):
 
     df = df.loc[df['Sentiment course'] != 0]
 
-    courses = df.Course.unique()
+    courses = df['Course'].unique()
 
     course_list = []
 
@@ -57,12 +43,36 @@ def course_list(df):
         positive_count = len(df3.index)
         df3 = df2.loc[df2['Sentiment course'] == -1]
         negative_count = len(df3.index)
-        course_list.append((course,total_count,positive_count,negative_count))
+        percent_positive = round((positive_count/total_count),2)
+        course_list.append((course, total_count, positive_count, negative_count, percent_positive))
+    
+    course_list = sorted(course_list, key = lambda x: x[4], reverse=True)
     
     return course_list
     
 
-print(course_list(df))
+for course in course_list(df):
+    print(course)
+
+
+
+def row(course):
+
+    fig = go.Figure(data = [go.Bar( y=[course[0]], x=[course[2]], orientation='h', width=0.4, marker_color='#109c33'),
+                            go.Bar( y=[course[0]], x=[course[3]], orientation='h', width=0.4, marker_color='#eb4034')])
+
+    fig.update_layout(barmode='stack',
+                      xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                      yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                      margin=dict(l=0, r=0, b=0, t=0, pad=0),
+                      paper_bgcolor="white",
+                      plot_bgcolor="white",
+                      showlegend=False,
+                      height=40,
+                      )
+    return fig
+
+
 
 
 import dash
@@ -114,6 +124,17 @@ app.layout = html.Div(className="container", children = [
         ]
     ),
     html.Br(),
+
+    # represents the URL bar, doesn't render anything
+    dcc.Location(id='url', refresh=False),
+
+    dcc.Link('Navigate to "/"', href='/'),
+    html.Br(),
+    dcc.Link('Navigate to "/page-2"', href='/page-2'),
+
+    # content will be rendered in this element
+    html.Div(id='page-content'),
+
     dcc.Tabs(id='page-tabs',
             value='tab-1',
             parent_className='custom-tabs',
@@ -355,34 +376,88 @@ def render_content(tab):
         return html.Div(
             className="dashboard_container",
             children=[
-                html.Br(),
+                html.Div(
+                    id='table-headers',
+                    className='row',
+                    children=[
+                        html.Div(
+                            id='title-label',
+                            className='seven columns table_header',
+                            children=html.P('Course Name'),
+                        ),
+                        html.Div(
+                            className='two columns table_header',
+                            children=html.P(''),
+                        ),
+                        html.Div(
+                            className='two columns table_header',
+                            children=html.P('Quantity'),
+                        ),
+                        html.Div(
+                            className='one columns table_header',
+                            children=html.P('Score'),
+                        )
+                    ]
+                ),
+                        
+                        
+
+                html.Div(id='div_variable'),
+
                 dcc.Dropdown(
                     id='div_num_dropdown',
+                    style={'visibility': 'hidden'},
                     options=[{'label':i, 'value':i} for i in range (5)],
                     value=1
                 ),
-                html.Br(),
-                html.Div(id='div_variable'),
-                html.Br(),
-                html.Div(
-                    className="cell",
-                    
-                    
-                )
-
-            
-        ])
+            ]
+        ),
     elif tab == 'tab-3':
         return html.Div(className="dashboard_container", children=[
             html.H3('Tab content 3')
         ])
 
+@app.callback(dash.dependencies.Output('page-content', 'children'),
+              [dash.dependencies.Input('url', 'pathname')])
+def display_page(pathname):
+    return html.Div([
+        html.H3('You are on page {}'.format(pathname))
+    ])
+
 @app.callback(
 	Output('div_variable', 'children'),
   	[Input('div_num_dropdown', 'value')]
 )
+
+
 def update_div(num_div):
-   	return [html.Div(children=f'Div #{i}') for i in range (num_div)]
+   	
+    courses = len(course_list(df))
+
+    return [
+           html.Div(
+                children=[
+                    html.Div(
+                        className='row cell',
+                        children=[
+                            html.Div(
+                                className='seven columns cell_text',
+                                children=html.P(course_list(df)[i][0])),
+                            html.Div(
+                                className='two columns',
+                                children=dcc.Graph(id=f'Bar #{i}',
+                                                # config={'staticPlot': True},
+                                                figure=row(course_list(df)[i]))),
+                            html.Div(
+                                className='two columns cell_text',
+                                children=html.P(course_list(df)[i][1])),
+                            html.Div(
+                                className='one columns cell_text',
+                                children=html.P("{}%".format(course_list(df)[i][4]*100))),
+                            
+                            ]) for i in range (courses) ]
+            )
+    ]
 
 # update figure main pie chart  (based on dropdown's value)
 @app.callback(
