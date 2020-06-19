@@ -25,56 +25,6 @@ df = df[(df["Training company"] == "Entertainment 720")]
 
 
 
-def course_list(df):
-    '''
-    Returns a list of courses with corresponding total number of positive/negative reviews
-    '''
-
-    df = df.loc[df['Sentiment course'] != 0]
-
-    courses = df['Course'].unique()
-
-    course_list = []
-
-    for course in courses:
-        df2 = df.loc[df['Course'] == course]
-        total_count = len(df2.index)
-        df3 = df2.loc[df2['Sentiment course'] == 1]
-        positive_count = len(df3.index)
-        df3 = df2.loc[df2['Sentiment course'] == -1]
-        negative_count = len(df3.index)
-        percent_positive = round((positive_count/total_count),2)
-        course_list.append((course, total_count, positive_count, negative_count, percent_positive))
-    
-    course_list = sorted(course_list, key = lambda x: x[4], reverse=True)
-    
-    return course_list
-    
-
-for course in course_list(df):
-    print(course)
-
-
-
-def row(course):
-
-    fig = go.Figure(data = [go.Bar( y=[course[0]], x=[course[2]], orientation='h', width=0.4, marker_color='#109c33'),
-                            go.Bar( y=[course[0]], x=[course[3]], orientation='h', width=0.4, marker_color='#eb4034')])
-
-    fig.update_layout(barmode='stack',
-                      xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-                      yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-                      margin=dict(l=0, r=0, b=0, t=0, pad=0),
-                      paper_bgcolor="white",
-                      plot_bgcolor="white",
-                      showlegend=False,
-                      height=40,
-                      )
-    return fig
-
-
-
-
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
@@ -124,16 +74,6 @@ app.layout = html.Div(className="container", children = [
         ]
     ),
     html.Br(),
-
-    # represents the URL bar, doesn't render anything
-    dcc.Location(id='url', refresh=False),
-
-    dcc.Link('Navigate to "/"', href='/'),
-    html.Br(),
-    dcc.Link('Navigate to "/page-2"', href='/page-2'),
-
-    # content will be rendered in this element
-    html.Div(id='page-content'),
 
     dcc.Tabs(id='page-tabs',
             value='tab-1',
@@ -399,6 +339,7 @@ def render_content(tab):
                         )
                     ]
                 ),
+                html.Hr(),
                         
                         
 
@@ -417,12 +358,6 @@ def render_content(tab):
             html.H3('Tab content 3')
         ])
 
-@app.callback(dash.dependencies.Output('page-content', 'children'),
-              [dash.dependencies.Input('url', 'pathname')])
-def display_page(pathname):
-    return html.Div([
-        html.H3('You are on page {}'.format(pathname))
-    ])
 
 @app.callback(
 	Output('div_variable', 'children'),
@@ -446,7 +381,7 @@ def update_div(num_div):
                             html.Div(
                                 className='two columns',
                                 children=dcc.Graph(id=f'Bar #{i}',
-                                                # config={'staticPlot': True},
+                                                config={'staticPlot': True},
                                                 figure=row(course_list(df)[i]))),
                             html.Div(
                                 className='two columns cell_text',
