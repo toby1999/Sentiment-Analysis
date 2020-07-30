@@ -8,3 +8,5 @@ room
 lunch
 food
 location
+bathroom
+parking

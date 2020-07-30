@@ -16,6 +16,7 @@ from Home import *
 from Courses import *
 from Trainers import *
 
+pd.options.mode.chained_assignment = None
 
 # Load the dataframe using Pickle
 pickle_df  = open("Data/Pickle/dataFrame.pickle", "rb")
@@ -23,9 +24,10 @@ df  = pickle.load(pickle_df)
 
 df = df[(df["Training company"] == "Entertainment 720")]
 
-
+# aspect_bar(df)
 
 import dash
+import dash_daq as daq
 import dash_core_components as dcc
 import dash_html_components as html
 
@@ -58,7 +60,7 @@ app.layout = html.Div(className="container", children = [
                     html.Div(
                         className='eight columns',
                         children=[
-                            html.H3(
+                            html.H6(
                                 children='SENTIMENT ANALYSIS DASHBOARD',
                                 style={
                                     'textAlign': 'right',
@@ -90,6 +92,10 @@ app.layout = html.Div(className="container", children = [
                         selected_className='custom-tab--selected'),
                 dcc.Tab(label='Trainers',
                         value='tab-3',
+                        className='custom-tab',
+                        selected_className='custom-tab--selected'),
+                dcc.Tab(label='Venue',
+                        value='tab-4',
                         className='custom-tab',
                         selected_className='custom-tab--selected'),
             ]
@@ -128,7 +134,7 @@ def render_content(tab):
                                                     value=7,
                                                     clearable=False,
                                                     options = [
-                                                        { 'label' : 'Overall', 'value' : 7  },
+                                                        { 'label' : 'General', 'value' : 7  },
                                                         { 'label' : 'Course',  'value' : 8  },
                                                         { 'label' : 'Trainer', 'value' : 9  },
                                                         { 'label' : 'Venue',   'value' : 10 }
@@ -142,12 +148,14 @@ def render_content(tab):
                                             children=[
                                                 dcc.Dropdown(
                                                     id="frequency_period_dropdown",
-                                                    value="W-MON",
+                                                    value="M",
                                                     clearable=False,
                                                     options=[
                                                         {"label": "By day", "value": "D"},
                                                         {"label": "By week", "value": "W-MON"},
                                                         {"label": "By month", "value": "M"},
+                                                        {"label": "By quarter", "value": "Q"},
+                                                        {"label": "By year", "value": "A"},
                                                     ]
                                                 )
                                             ]
@@ -157,7 +165,7 @@ def render_content(tab):
                                             className='five columns',
                                             children=[
                                                 dcc.Dropdown(
-                                                    id="time_period_dropdown",
+                                                    id="time-period-dropdown",
                                                     value=1,
                                                     clearable=False,
                                                     options=[
@@ -217,7 +225,7 @@ def render_content(tab):
                                             children=[
                                                 html.H1(
                                                     id='percentage-indicator',
-                                                    children=percentage_change(df, 'overall'),
+                                                    children=percentage_change(df, 'general'),
                                                     style={'margin-top' : '0px',
                                                         'margin-bottom' : '0px',
                                                         "text-align" : "center"}
@@ -248,7 +256,7 @@ def render_content(tab):
                                         html.P('Review frequency'),
                                         dcc.Graph(
                                             id="review-frequency",
-                                            figure=frequency_chart(df, "W-MON")
+                                            figure=frequency_chart(df, "M")
                                         )
                                     ]
                                 ),
@@ -257,9 +265,9 @@ def render_content(tab):
                                     id="pie1",
                                     className="dashboard_segment four columns",
                                     children=[
-                                        html.P(id="pie1-title", children="Overall sentiment"),
+                                        html.P(id="pie1-title", children="General sentiment"),
                                         dcc.Graph(id="overall-pie",
-                                            figure=sentiment_pie(df, 'Sentiment overall'),
+                                            figure=overall_pie(df, 'Sentiment general'),
                                             config={'displayModeBar': False}
                                         )
                                     ]
@@ -268,8 +276,20 @@ def render_content(tab):
                                 html.Div(
                                     className="dashboard_segment four columns",
                                     children=[
-                                        html.P("Reasons for positive feedback"),
-                                        dcc.Graph(id="positive-pie",
+                                        html.P(
+                                            id="aspect-title",
+                                            style={'display': 'inline-block'},
+                                            children=["Reasons for positive feedback"]
+                                        ),
+                                        daq.ToggleSwitch(
+                                            id='polarity-toggle',
+                                            style={'display': 'inline-block', 'float':'right', 'margin-top':'5px'},
+                                            size=30,
+                                            value=False
+                                        ),
+                                        # html.Div(id='toggle-switch-output'),
+                                        dcc.Graph(
+                                            id="aspect-pie",
                                             figure=aspect_pie(df, 'positive'),
                                             config={'displayModeBar': False}
                                         )
@@ -287,24 +307,32 @@ def render_content(tab):
                                 html.Div(
                                     className="dashboard_segment eight columns",
                                     children=[
-                                        html.P('Trainer sentiments'),
+                                        html.P(
+                                            id='sentiment-chart-title',
+                                            children=['Overall sentiment change']
+                                        ),
                                         dcc.Graph(
-                                            figure=sentiment_bar(df, 'trainer')
+                                            id='sentiment-chart',
+                                            figure=sentiment_chart(df, ['Sentiment general',
+                                                                        'Sentiment trainer',
+                                                                        'Sentiment course'], 'M')
+
                                         )
                                     ]
                                 ),
-
-                                # Negative pie
                                 html.Div(
                                     className="dashboard_segment four columns",
                                     children=[
-                                        html.P("Reasons for negative feedback"),
-                                        dcc.Graph(id="negative-pie",
-                                            figure=aspect_pie(df, 'negative'),
-                                            config={'displayModeBar': False}
+                                        html.P(
+                                            id='sentiment-bar-title',
+                                            children=['Average sentiment']
+                                        ),
+                                        dcc.Graph(
+                                            id='sentiment-bar',
+                                            figure=sentiment_bar(df)
                                         )
                                     ]
-                                )
+                                ),
                             ]
                         ),
                         html.Br()
@@ -313,41 +341,65 @@ def render_content(tab):
             ]
         )
     elif tab == 'tab-2':
+        global nclicks
+        nclicks = [None for i in range(len(course_list(df)))]+[0]
+
         return html.Div(
             className="dashboard_container",
             children=[
                 html.Div(
-                    id='table-headers',
-                    className='row',
+                    id='course_div',
                     children=[
                         html.Div(
-                            id='title-label',
-                            className='seven columns table_header',
-                            children=html.P('Course Name'),
+                            id='table-headers',
+                            className='row',
+                            children=[
+                                html.Div(
+                                    id='title-label',
+                                    className='seven columns table_header',
+                                    children=html.P('Course Name'),
+                                ),
+                                html.Div(
+                                    className='two columns table_header',
+                                    children=html.P(''),
+                                ),
+                                html.Div(
+                                    className='two columns table_header',
+                                    children=html.P('Quantity'),
+                                ),
+                                html.Div(
+                                    className='one columns table_header',
+                                    children=html.P('Score'),
+                                )
+                            ]
                         ),
+                        html.Hr(),
+
                         html.Div(
-                            className='two columns table_header',
-                            children=html.P(''),
+                            id='course_list_div'
                         ),
-                        html.Div(
-                            className='two columns table_header',
-                            children=html.P('Quantity'),
-                        ),
-                        html.Div(
-                            className='one columns table_header',
-                            children=html.P('Score'),
-                        )
                     ]
                 ),
-                html.Hr(),
-                        
-                        
+                html.Div(
+                    id='button_div',
+                    style={'display' : 'none'},
+                    className='two columns',
+                    children=[
+                        html.Button('Back', id='back-button', className='back-button', n_clicks=0)
+                    ]
+                ),
 
-                html.Div(id='div_variable'),
+                html.Div(
+                    html.H1(
+                        id='title_div',
+                        className='ten columns',
+                        style={'text-align' : 'right', 'vertical-align': 'middle', 'font-family': "HelveticaNeue", 'color' : 'rgb(64,64,64)'}
+                    )
+                ),
 
                 dcc.Dropdown(
                     id='div_num_dropdown',
-                    style={'visibility': 'hidden'},
+                    style={'display': 'none'},
                     options=[{'label':i, 'value':i} for i in range (5)],
                     value=1
                 ),
@@ -356,14 +408,17 @@ def render_content(tab):
     elif tab == 'tab-3':
         return html.Div(className="dashboard_container", children=[
             html.H3('Tab content 3')
+        ]),
+    elif tab == 'tab-4':
+        return html.Div(className="dashboard_container", children=[
+            html.H3('Tab content 4')
         ])
 
 
-@app.callback(
-	Output('div_variable', 'children'),
-  	[Input('div_num_dropdown', 'value')]
-)
 
+@app.callback(
+	Output('course_list_div', 'children'),
+  	[Input('div_num_dropdown', 'value')])
 
 def update_div(num_div):
    	
@@ -374,6 +429,7 @@ def update_div(num_div):
                 children=[
                     html.Div(
                         className='row cell',
+                        id="row {}".format(i),
                         children=[
                             html.Div(
                                 className='seven columns cell_text',
@@ -389,30 +445,113 @@ def update_div(num_div):
                             html.Div(
                                 className='one columns cell_text',
                                 children=html.P("{}%".format(course_list(df)[i][4]*100))),
-                            
                             ]) for i in range (courses) ]
             )
     ]
 
-# update figure main pie chart  (based on dropdown's value)
+nclicks = [None for i in range(len(course_list(df)))]+[0]
+
+
+@app.callback(
+        [dash.dependencies.Output('title_div','children'),
+         dash.dependencies.Output('button_div','style'),
+         dash.dependencies.Output('course_div','style')],
+        [dash.dependencies.Input('row {}'.format(i),'n_clicks') for i in range(len(course_list(df)))]+
+        [dash.dependencies.Input('back-button', 'n_clicks')])
+
+
+def update_dist(*argv):
+    global nclicks
+    
+    title = ""
+    
+    # If course is clicked
+    for i in range(len(argv)-1):
+        if argv[i] != nclicks[i]:
+            title = str(course_list(df)[i][0])
+            button = {'display' : 'block'}
+            courses = {'display' : 'none'}
+        
+    # If back button is clicked
+    if argv[-1] != nclicks[-1]:
+        button = {'display' : 'none'}
+        courses = {'display' : 'inline'}
+    
+    nclicks=argv
+
+
+    return title, button, courses
+
+
+
+
+# Update positive/negative aspect pie
+
+@app.callback(
+    dash.dependencies.Output('aspect-pie', 'figure'),
+    [dash.dependencies.Input('polarity-toggle', 'value')])
+
+def update_output(value):
+    if value == False:
+        return aspect_pie(df, 'positive')
+    else:
+        return aspect_pie(df, 'negative')
+
+@app.callback(
+    dash.dependencies.Output('aspect-title', 'children'),
+    [dash.dependencies.Input('polarity-toggle', 'value')])
+
+def update_output(value):
+    if value == False:
+        return "Reasons for positive feedback"
+    else:
+        return "Reasons for negative feedback"
+
+# update figure main pie chart based on dropdown's value
 @app.callback(
     Output("overall-pie", "figure"),
     [Input("sentiment-dropdown", "value")],
 )
 def overall_callback(value):
     aspect=value
-    return sentiment_pie(df, aspect)
+    return overall_pie(df, aspect)
 
-# update title main pie chart (based on dropdown's value)
+# update figure sentiment chart based on dropdown's value
+@app.callback(
+    Output("sentiment-chart", "figure"),
+    [Input("sentiment-dropdown", "value"),
+     Input("frequency_period_dropdown", "value")],
+)
+def sentiment_chart_callback(value, freq):
+    if value == 7:  return sentiment_chart(df,['Sentiment general',
+                                               'Sentiment course',
+                                               'Sentiment trainer'], freq)
+                                               
+    if value == 8:  return sentiment_chart(df,['Sentiment course'], freq)
+    if value == 9:  return sentiment_chart(df,['Sentiment trainer'], freq)
+    if value == 10: return sentiment_chart(df,['Sentiment venue'], freq)
+
+# update title main pie chart based on dropdown's value
 @app.callback(
     Output("pie1-title", "children"),
     [Input("sentiment-dropdown", "value")],
 )
 def pie1_callback(value):
-    if value == 7:  return 'Overall sentiment'
+    if value == 7:  return 'General sentiment'
     if value == 8:  return 'Course sentiment'
     if value == 9:  return 'Trainer sentiment'
     if value == 10: return 'Venue sentiment'
+
+# update title sentiment chart based on dropdown's value
+@app.callback(
+    Output("sentiment-chart-title", "children"),
+    [Input("sentiment-dropdown", "value")],
+)
+def sentiment_chart_title_callback(value):
+    if value == 7:  return 'Sentiment change'
+    if value == 8:  return 'Course sentiment change'
+    if value == 9:  return 'Trainer sentiment change'
+    if value == 10: return 'Venue sentiment change'
 
 
 # Frequency chart day/week/month callback
@@ -423,6 +562,7 @@ def pie1_callback(value):
 def time_period_callback(value):
     return frequency_chart(df, value)
 
+
 # Percent change KPI 
 @app.callback(
     Output("percentage-indicator", "children"),
@@ -430,7 +570,6 @@ def time_period_callback(value):
 )
 def KPI_percent_indicator_callback(value):
     return percentage_change(df, value)
-
 
 
 print("Success")

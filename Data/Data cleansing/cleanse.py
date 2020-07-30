@@ -5,8 +5,17 @@ spreadsheet = pd.read_excel ('coursecheck_data.xlsx') # Open spreadsheet
 dataset = pd.DataFrame(spreadsheet,
                        columns= ['General Comments'])
 
-positive = open("positive.txt", "a")
-negative = open("negative.txt", "a")
+positive = open("positive.txt", "r")
+negative = open("negative.txt", "r")
+
+completed_positive = len(positive.readlines())
+completed_negative = len(negative.readlines())
+
+log = open("log.txt", "r")
+
+lines = log.read().splitlines()
+last_line = int(lines[-1].split(" ")[-1]) # Get line number from last time.
+
 log = open("log.txt", "a")
 
 def getReviews(data):
@@ -27,12 +36,16 @@ def getReviews(data):
 
 
 reviews = getReviews(dataset)
-print(len(reviews), "sentences")
+
+reviews_remaining = len(reviews) - completed_positive - completed_negative
+print(completed_positive, "positive sentences labelled")
+print(completed_negative, "negative sentences labelled")
+print("\nSentences remaining:", reviews_remaining)
 
 log.write("\nStart: " + str(datetime.now()))
 
 for i in range(len(reviews)):
-    if i < 1005: continue
+    if i < last_line: continue
     print("\n\n" + str(i) + ":    " + reviews[i])
     entry = int(input())
     if entry == 0:

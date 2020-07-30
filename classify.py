@@ -31,7 +31,7 @@ def aspect(sentence):
     # Split the sentence into words
     words = sentence.split()
     # List to collect sentiment aspects based on keywords
-    aspects = {'course_content' : 0, 'trainer' : 0, 'venue' : 0, 'overall' : 0}
+    aspects = {'course_content' : 0, 'trainer' : 0, 'venue' : 0, 'general' : 0}
 
     for word in words:
 
@@ -46,7 +46,7 @@ def aspect(sentence):
 
     # Return sentiment aspect
     if  sum(aspects.values()) == 0:
-        aspects['overall'] = 1
+        aspects['general'] = 1
 
     return aspects
 
@@ -61,7 +61,7 @@ def classify(string):
     Takes in a review and returns its sentiments
     '''
     # variables to store sentiment values
-    overall_sentiment = 0
+    general_sentiment = 0
     trainer_sentiment = 0
     course_sentiment  = 0
     venue_sentiment   = 0
@@ -89,8 +89,8 @@ def classify(string):
             if aspect(sentence)['venue'] == 1:
                 venue_sentiment += 1
 
-            if aspect(sentence)['overall'] == 1:
-                overall_sentiment += 1
+            if aspect(sentence)['general'] == 1:
+                general_sentiment += 1
 
         if sentiment == 'Negative':
 
@@ -103,22 +103,22 @@ def classify(string):
             if aspect(sentence)['venue'] == 1:
                 venue_sentiment -= 1
 
-            if aspect(sentence)['overall'] == 1:
-                overall_sentiment -= 1
+            if aspect(sentence)['general'] == 1:
+                general_sentiment -= 1
 
     def make_1_or_0(sentiment):
         if sentiment > 0: return  1
         if sentiment < 0: return -1
         else: return 0
 
-    overall_sentiment = make_1_or_0(overall_sentiment)
+    general_sentiment = make_1_or_0(general_sentiment)
     trainer_sentiment = make_1_or_0(trainer_sentiment)
     course_sentiment = make_1_or_0(course_sentiment)
     venue_sentiment = make_1_or_0(venue_sentiment)
 
     # Return a dictionary with sentiment aspects
 
-    return {'Overall'        : overall_sentiment,
+    return {'General'        : general_sentiment,
             'Course'         : course_sentiment,
             'Trainer'        : trainer_sentiment,
             'Venue'          : venue_sentiment }
@@ -126,4 +126,65 @@ def classify(string):
 
 print("Classifier ready")
 
-# print(classify("The trainer and course was suberb but the food was terrible and disgusting. Happy good though"))
+def test_segmentation():
+
+    pos_file = open("Data/Data cleansing/positive.txt", "r").readlines()
+    neg_file = open("Data/Data cleansing/negative.txt", "r").readlines()
+
+    pos_samples = pos_file[:50]
+    neg_samples = neg_file[:50]
+
+    print("Number of positive samples:", len(pos_samples))
+    print("Number of negative samples:", len(neg_samples))
+
+    sample_sentences = pos_samples + neg_samples
+
+    classifier_answers_file = open("Testing/Segmentation/aspects.txt","w+")
+    actual_answers_file = open("Testing/Segmentation/aspects answers.txt","r").readlines()
+
+    classifier_answers = []
+    actual_answers = []
+
+    for line in actual_answers_file:
+        actual_answers.append(line.rstrip())
+
+    for line in sample_sentences:
+        result = classify(line)
+        if result['General'] == -1: result['General'] = 1
+        if result['Course'] == -1: result['Course'] = 1
+        if result['Trainer'] == -1: result['Trainer'] = 1
+        if result['Venue'] == -1: result['Venue'] = 1
+        classifier_answers_file.write(str(result)+"\n")
+        classifier_answers.append(str(result))
+
+    correct = 0
+    incorrect = 0
+
+    for i in range(100):
+        if classifier_answers[i] == actual_answers[i]:
+            correct += 1
+        else:
+            incorrect += 1
+    print("\nSentence segmentation accuracy:", str((correct/(correct+incorrect))*100)+"%")
+
+
+'''
+
+print("\nEnter string below (enter 'break' to exit)")
+
+while True:
+    input_text = input()
+    if input_text == "break":
+        break
+    # print('"'+input_text+'"')
+    result = classify(input_text)
+    if result['General'] == 1: print("Aspect: GENERAL\nPolarity: POSITIVE")
+    if result['General'] == -1: print("Aspect: GENERAL\nPolarity: NEGATIVE")
+    if result['Course'] == 1: print("Aspect: COURSE CONTENT\nPolarity: POSITIVE")
+    if result['Course'] == -1: print("Aspect: COURSE-CONTENT\nPolarity: NEGATIVE")
+    if result['Trainer'] == 1: print("Aspect: TRAINER\nPolarity: POSITIVE")
+    if result['Trainer'] == -1: print("Aspect: TRAINER\nPolarity: NEGATIVE")
+    if result['Venue'] == 1: print("Aspect: VENUE\nPolarity: POSITIVE")
+    if result['Venue'] == -1: print("Aspect: VENUE\nPolarity: NEGATIVE")
+    print("")
+'''

@@ -5,7 +5,6 @@ tutors
 facilitator
 facilitators
 instructor
-instructor
 teacher
 teacher
 he
@@ -19,3 +18,7 @@ concise
 teaching
 engaged
 answer
+explained
+patient
+talking
+talked

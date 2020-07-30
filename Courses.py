@@ -41,3 +41,5 @@ def row(course):
                       height=40,
                       )
     return fig
+
+    

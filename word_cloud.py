@@ -1,38 +1,58 @@
-import numpy as np
+import re
+import nltk
 import pickle
+import numpy as np
 import pandas as pd
 from os import path
-from PIL import Image
-from wordcloud import WordCloud, STOPWORDS, ImageColorGenerator
-import matplotlib.pyplot as plt
+from wordcloud import WordCloud, ImageColorGenerator, STOPWORDS, get_single_color_func
 
-# Unpickling dataframe
+stopwords = set(STOPWORDS)
+
+# Deserializing dataframe
 pickle_df  = open("Data/Pickle/dataFrame.pickle", "rb")
 df  = pickle.load(pickle_df)
 df = df[(df["Training company"] == "Entertainment 720")]
 
-# Concatenates all the reviews into a single string
-text = " ".join(review for review in df['Review'])
+# Removes any unwanted punctuation, special characters or numbers
+reviews = " ".join(review for review in df['Review'])
+reviews = re.sub("[^A-Za-z" "]+"," ",reviews).lower()
+reviews = re.sub("[0-9" "]+"," ",reviews)
 
-# Add some extra stopwords
-stopwords = set(STOPWORDS)
-stopwords.update(["trainer", "course", "training", "day", "material",
-                  "time", "felt", "content", "made"])
-# Make the word cloud
-wordcloud = WordCloud(stopwords=stopwords,
-                      max_words=50,
-                      background_color="white",
-                      mode="RGBA",
-                      width=800,
-                      height=400).generate(text)
+# Splits reviews into a list of words
+words = reviews.split(" ")
 
-# Add a colorscale
-mask = np.array(Image.open("Data/cloud_colorscale.png"))
-image_colors = ImageColorGenerator(mask)
-# Show word cloud and save to png
-#.recolor(color_func=image_colors)
-plt.figure(figsize=[7,7])
-plt.imshow(wordcloud, interpolation='bilinear')
-plt.axis("off")
-wordcloud.to_file("Data/word_cloud.png")
-plt.show()
+# Open positive and negative word lists
+with open("Data/Wordcloud_data/positive-words.txt","r") as positive:
+    positive_list = positive.read().split("\n")
+
+with open("Data/Wordcloud_data/negative-words.txt", "r", encoding="ISO-8859-1") as negative:
+    negative_list = negative.read().split("\n")
+
+green = get_single_color_func('darkgreen')
+red = get_single_color_func('red')
+
+# Generate positive word cloud
+print("Preparing positive cloud")
+positive_words = " ".join([word for word in words if word in positive_list])
+positive_cloud = WordCloud(stopwords=stopwords,
+                           color_func=green,
+                           background_color='white',
+                           max_words=50,
+                           width=600,
+                           height=600,
+                           ).generate(positive_words)
+
+# Generate negative word cloud
+print("Preparing negative cloud")
+negative_words = " ".join([word for word in words if word in negative_list])
+negative_cloud = WordCloud(stopwords=stopwords,
+                           color_func=red,
+                           background_color='white',
+                           max_words=50,
+                           width=600,
+                           height=600,
+                           ).generate(negative_words)
+
+print("Generating files")
+positive_cloud.to_file("Data/Wordcloud_data/wordcloud_pos.png")
+negative_cloud.to_file("Data/Wordcloud_data/wordcloud_neg.png")

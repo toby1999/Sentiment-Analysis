@@ -72,17 +72,17 @@ def makeDataFrame(reviews):
 
 
 def getSentiments(df):
-    sentiments_overall = []
+    sentiments_general = []
     sentiments_course  = []
     sentiments_trainer = []
     sentiments_venue   = []
     for review in df.iterrows():
         sentiment = classify(review[1][4])
-        sentiments_overall.append(sentiment['Overall'])
+        sentiments_general.append(sentiment['General'])
         sentiments_course .append(sentiment['Course' ])
         sentiments_trainer.append(sentiment['Trainer'])
         sentiments_venue  .append(sentiment['Venue' ])
-    return sentiments_overall, sentiments_course, sentiments_trainer, sentiments_venue
+    return sentiments_general, sentiments_course, sentiments_trainer, sentiments_venue
 
 def dump(df):
     print("Serializing dataFrame...")
@@ -95,7 +95,7 @@ def showWordFreq(n_most_common):
     '''
     Prints list of n most common words
     '''
-    word_frequency = word_freq.getWordFreq(dataFrame['Review'],
+    word_frequency = word_freq.getWordFreq(df['Review'],
                                            n_most_common,
                                            stopwords.words('english'))
 
@@ -109,15 +109,13 @@ reviews = getReviews(dataset)
 df = makeDataFrame(reviews)
 
 print("Classifying reviews...")
-sentiment_overall, sentiment_course, sentiment_trainer, sentiment_venue = getSentiments(df)
+sentiment_general, sentiment_course, sentiment_trainer, sentiment_venue = getSentiments(df)
 
-df['Sentiment overall'] = sentiment_overall
+df['Sentiment general'] = sentiment_general
 df['Sentiment course'] = sentiment_course
 df['Sentiment trainer'] = sentiment_trainer
 df['Sentiment venue'] = sentiment_venue
 
 # dump(df)
 # print(df.head())
-# showWordFreq(10)
-
-print("Done")
+# showWordFreq(15)
