@@ -194,8 +194,6 @@ def aspect_pie(df, polarity):
 
 # Charts (row 2)
 
-
-
 def sentiment_chart(df, aspects, freq):
 
     traces = []
@@ -221,9 +219,9 @@ def sentiment_chart(df, aspects, freq):
         if name == 'Course':
             color= '#7e238c'
         if name == 'Trainer':
-            color='#f2a41f'
-        if name == 'Venue':
             color='lightslategray'
+        if name == 'Venue':
+            color='#f2a41f'
 
         trace = go.Scatter(
             x=sentiments["Date"],
@@ -276,8 +274,8 @@ def sentiment_bar(df):
                    width=0.5,
                    marker_color=["rgb(31,119,180)",
                                  "#7e238c",
-                                 "#f2a41f",
-                                 "lightslategray"],
+                                 "lightslategray",
+                                 "#f2a41f"],
                 )
 
     return dict(data=[trace], layout=layout)

@@ -24,8 +24,6 @@ df  = pickle.load(pickle_df)
 
 df = df[(df["Training company"] == "Entertainment 720")]
 
-# aspect_bar(df)
-
 import dash
 import dash_daq as daq
 import dash_core_components as dcc
@@ -348,7 +346,7 @@ def render_content(tab):
             className="dashboard_container",
             children=[
                 html.Div(
-                    id='course_div',
+                    id='course_list_div',
                     children=[
                         html.Div(
                             id='table-headers',
@@ -376,7 +374,7 @@ def render_content(tab):
                         html.Hr(),
 
                         html.Div(
-                            id='course_list_div'
+                            id='course_list'
                         ),
                     ]
                 ),
@@ -393,9 +391,97 @@ def render_content(tab):
                     html.H1(
                         id='title_div',
                         className='ten columns',
-                        style={'text-align' : 'right', 'vertical-align': 'middle', 'font-family': "HelveticaNeue", 'color' : 'rgb(64,64,64)'}
+                        style={'text-align' : 'right',
+                               'vertical-align': 'middle',
+                               'font-family': "HelveticaNeue",
+                               'color' : 'rgb(64,64,64)'}
                     )
                 ),
+
+                html.Div(
+                    id="course_main",
+                    style={'display': 'none'},
+                    children=[
+
+                        # Row 0
+                        html.Div(
+                            className='row',
+                            children=[
+                                html.Div(
+                                    id='graph23',
+                                    className='dashboard_segment six columns',
+                                    children=[
+                                        html.P("Average trainer sentiments"),
+                                        dcc.Graph(
+                                            figure=top_trainers(df),
+                                            style={'height': '400px'},
+                                        )
+                                    ]
+                                ),
+                                html.Div(
+                                    id='graph25',
+                                    className='dashboard_segment six columns',
+                                    children=[
+                                        html.P("Average course sentiment"),
+                                        dcc.Graph(
+                                            figure=course_sentiment_chart(df),
+                                            style={'height': '400px'},
+                                        )
+                                    ]
+                                )
+                            ]
+                        ),
+                        html.Br(),
+
+                        # Row 1
+                        html.Div(
+                            className='row',
+                            children=[
+                                html.Div(
+                                    id='course_positive_word_freq_div',
+                                    className='dashboard_segment three columns',
+                                    children=[
+                                        html.P("Top positive features"),
+                                        dcc.Graph(
+                                            id='course-positive-word-freq',
+                                            style={'height': '400px'},
+                                        )
+                                    ]
+                                ),
+                                html.Div(
+                                    id='word_cloud_div',
+                                    className='dashboard_segment five columns',
+                                    children=[
+                                        html.P("Word cloud"),
+                                    ]
+                                )
+                            ]
+                        ),
+                        html.Br(),
+
+                        
+                        # Row 2
+                        html.Div(
+                            className='row',
+                            children=[
+                                html.Div(
+                                    id='course_negative_word_freq_div',
+                                    style={'height': '40'},
+                                    className='dashboard_segment three columns',
+                                    children=[
+                                        html.P("Top negative features"),
+                                        dcc.Graph(
+                                            id='course-negative-word-freq',
+                                            style={'height': '400px'},
+                                        )
+                                    ]
+                                )
+                            ]
+                        )
+                    ]
+                ),
+
+                
 
                 dcc.Dropdown(
                     id='div_num_dropdown',
@@ -417,7 +503,7 @@ def render_content(tab):
 
 
 @app.callback(
-	Output('course_list_div', 'children'),
+	Output('course_list', 'children'),
   	[Input('div_num_dropdown', 'value')])
 
 def update_div(num_div):
@@ -455,32 +541,45 @@ nclicks = [None for i in range(len(course_list(df)))]+[0]
 @app.callback(
         [dash.dependencies.Output('title_div','children'),
          dash.dependencies.Output('button_div','style'),
-         dash.dependencies.Output('course_div','style')],
+         dash.dependencies.Output('course_list_div','style'),
+         dash.dependencies.Output('course_main','style'),
+         dash.dependencies.Output('course-positive-word-freq','figure'),
+         dash.dependencies.Output('course-negative-word-freq','figure')],
         [dash.dependencies.Input('row {}'.format(i),'n_clicks') for i in range(len(course_list(df)))]+
         [dash.dependencies.Input('back-button', 'n_clicks')])
 
 
 def update_dist(*argv):
     global nclicks
+    global df
     
-    title = ""
+    course_name = ""
     
     # If course is clicked
     for i in range(len(argv)-1):
         if argv[i] != nclicks[i]:
-            title = str(course_list(df)[i][0])
-            button = {'display' : 'block'}
-            courses = {'display' : 'none'}
+            course_name = str(course_list(df)[i][0])
+            button = {}
+            course_table = {'display' : 'none'}
+            course_main = {}
+            figure = df[(df["Course"] == course_name)]
         
     # If back button is clicked
     if argv[-1] != nclicks[-1]:
         button = {'display' : 'none'}
-        courses = {'display' : 'inline'}
+        course_table = {}
+        course_main = {'display' : 'none'}
+        figure = pd.DataFrame({'Sentiment course':[0], 'Review':[""]})
     
     nclicks=argv
 
 
-    return title, button, courses
+    return [course_name,
+            button,
+            course_table,
+            course_main,
+            common_words_bar(figure, 'positive'),
+            common_words_bar(figure, 'negative')]
 
 
 
