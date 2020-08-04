@@ -2,6 +2,7 @@ import operator
 import string
 from collections import Counter
 
+
 def wordFrequency(reviews):
     '''
     Iterates through the reviews and returns a dictionary of word frequencies

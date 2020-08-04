@@ -3,12 +3,15 @@ from dash.dependencies import Input, Output, State
 import dash_core_components as dcc
 import dash_html_components as html
 from plotly import graph_objs as go
+from plotly.subplots import make_subplots
 
 import operator
 import datetime
 import calendar
 from dateutil import rrule
 from dateutil.relativedelta import relativedelta
+
+from Courses import *
 
 date_today = datetime.date(2019,3,24)
 
@@ -49,20 +52,7 @@ def average_sentiment(df, aspect, end_date, start_date):
     return average_sentiment
 
 def reviews_today(df):
-    today = date_today
-    df["Date"] = pd.to_datetime(df["Date"])
-
-    df = (
-        df.groupby([pd.Grouper(key="Date", freq="D")])
-        .count()
-        .reset_index()
-        .sort_values("Date", ascending=False)
-    )
-
-    df = df[(df['Date'] == pd.to_datetime(today))]
-    reviews_today = df['Review'].values[0]
-
-    return reviews_today
+    return '0'
 
 def percentage_change(df, aspect):
     today = date_today
@@ -91,7 +81,6 @@ def percentage_change(df, aspect):
 
     return percentage_change
 
-
 # Charts (row 1)
 
 def frequency_chart(df, period):
@@ -109,6 +98,8 @@ def frequency_chart(df, period):
         y=df["Review"],
         fill="tozeroy",
         fillcolor="#e6f2ff",
+        hoverinfo='y',
+        hovertemplate = '%{y} reviews<extra></extra>',
     )
 
     data = [trace]
@@ -122,7 +113,6 @@ def frequency_chart(df, period):
     )
 
     return {"data": data, "layout": layout}
-
 
 def overall_pie(df, aspect):
 
@@ -194,58 +184,91 @@ def aspect_pie(df, polarity):
 
 # Charts (row 2)
 
-def sentiment_chart(df, aspects, freq):
+def sentiment_line_chart(df, aspect, freq):
 
-    traces = []
+    # Removes reviews where no sentiment was given
+    mask = (df[aspect] != 0)
+    df = df.loc[mask]
+    # Calculates average sentiment
+    df[aspect] = (df[aspect] + 1)/2
+    sentiments = (df.set_index('Date')
+                    .resample(freq)[aspect]
+                    .mean()
+                    .to_frame()
+                    .reset_index())
+    
+    df2 = df[(df[aspect] == 1)]
+    positive = (df2.set_index('Date')
+                   .resample(freq)[aspect]
+                   .count()
+                   .to_frame()
+                   .reset_index())
+    
+    df2 = df[(df[aspect] == 0)]
+    negative = (df2.set_index('Date')
+                   .resample(freq)[aspect]
+                   .count()
+                   .to_frame()
+                   .reset_index())
 
-    for aspect in aspects:
+    sf = positive[aspect].max()
 
-        # Removes reviews where no sentiment was given
-        mask = (df[aspect] != 0)
-        df = df.loc[mask]
-        # Calculates average sentiment
-        df[aspect] = (df[aspect] + 1)/2
-        sentiments = (df.set_index('Date')
-                        .resample(freq)[aspect]
-                        .mean()
-                        .to_frame()
-                        .reset_index())
+    name = aspect.split(' ', 1)
+    name = name[1].capitalize()
 
-        name = aspect.split(' ', 1)
-        name = name[1].capitalize()
+    fig = go.Figure(
+        data = [
+            go.Bar(x=sentiments['Date'],
+                   y=negative[aspect],
+                   marker_color='#d62515',
+                   marker_line_color='#960d00',
+                   name='Negative',
+                   opacity=1,
+                   hoverinfo='y',
+                   hovertemplate = '%{y} negative reviews<extra></extra>',
+            ),
 
-        if name == 'General':
-            color='rgb(31,119,180)'
-        if name == 'Course':
-            color= '#7e238c'
-        if name == 'Trainer':
-            color='lightslategray'
-        if name == 'Venue':
-            color='#f2a41f'
-
-        trace = go.Scatter(
-            x=sentiments["Date"],
-            y=sentiments[aspect],
-            line_shape='spline',
-            line=dict(color=color),
-            mode='lines',
-            name=name
-        )
-
-        traces.append(trace)
-
-    layout = go.Layout(
-        autosize=True,
-        xaxis=dict(showgrid=False),
-        yaxis=dict(range=[0,1.1], autorange=False),
-        margin=dict(l=33, r=25, b=37, t=5, pad=4),
-        paper_bgcolor="white",
-        plot_bgcolor="white",
+            go.Bar(x=sentiments['Date'],
+                   y=positive[aspect],
+                   marker_color='#089c35',
+                   marker_line_color='#00591b',
+                   name='Positive',
+                   opacity=1,
+                   hoverinfo='y',
+                   hovertemplate = '%{y} positive reviews<extra></extra>',
+            )
+        ]
     )
 
-    return {"data": traces, "layout": layout}
+    fig.update_layout(barmode='stack',
+                      paper_bgcolor="white",
+                      plot_bgcolor="white",
+                      margin=dict(l=33, r=25, b=37, t=5),
+                      showlegend=True,
+                      yaxis=dict(showgrid=True,
+                                 gridcolor='rgb(238,238,238)'),
+                      legend=dict(yanchor="top",
+                                  y=1,
+                                  xanchor="right",
+                                  x=1)
+    )
 
-def sentiment_bar(df):
+    fig2 = go.Scatter(x=sentiments["Date"],
+                      y=sentiments[aspect]*sf,
+                      line=dict(color='#303030', width=2, simplify=True),
+                      mode='lines+markers',
+                      name=name,
+                      hoverinfo='y',
+                      hovertemplate = 'Average sentiment: %{text}<extra></extra>',
+                      text=['{}'.format(value)[:4] for value in sentiments[aspect]]
+                      )
+
+
+    fig.add_trace(fig2)
+
+    return fig
+
+def aspect_bar(df):
     # print(df.head())
 
     aspects = ['Sentiment general', 'Sentiment course', 'Sentiment trainer', 'Sentiment venue']
@@ -272,10 +295,74 @@ def sentiment_bar(df):
     trace = go.Bar(x=xaxis,
                    y=sentiments,
                    width=0.5,
-                   marker_color=["rgb(31,119,180)",
-                                 "#7e238c",
-                                 "lightslategray",
-                                 "#f2a41f"],
+                   hoverinfo='y',
+                   hovertemplate = '%{y:.2f}<extra></extra>',
+                   marker_color=["rgb(84, 84, 84)",
+                                 "rgb(53,94,141)",
+                                 "rgb(240, 153, 24)",
+                                 "rgb(70,23,104)"],
                 )
 
     return dict(data=[trace], layout=layout)
+
+# Charts (row 3)
+
+def trainer_bar(df):
+
+    list_of_trainers = trainer_list(df)
+
+    trainers = [trainer[0] for trainer in list_of_trainers]
+    positive = [trainer[2] for trainer in list_of_trainers]
+    negative = [trainer[3] for trainer in list_of_trainers]
+
+
+    fig = go.Figure(data = [
+        go.Bar( x=trainers, y=negative, width=0.4, marker_color='#eb4034', name='negative'),
+        go.Bar( x=trainers, y=positive, width=0.4, marker_color='#109c33', name='positive')
+    ])
+
+    fig.update_layout(barmode='stack',
+                    #   xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                    #   yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                    #   margin=dict(l=0, r=0, b=0, t=0, pad=0),
+                    #   paper_bgcolor="white",
+                      plot_bgcolor="white",
+                      margin=dict(l=33, r=25, b=37, t=5),
+                      xaxis=dict(showline=True, linecolor='black', showgrid=False, gridcolor='black'),
+                      showlegend=False,
+                      yaxis = dict(showgrid=True, gridcolor='rgb(238,238,238)')
+                    #   height=40,
+                      )
+
+
+    return fig
+
+def course_bar(df):
+
+    list_of_courses = course_list(df)
+
+    courses = [course[0] for course in list_of_courses]
+    positive = [course[2] for course in list_of_courses]
+    negative = [course[3] for course in list_of_courses]
+
+
+    fig = go.Figure(data = [
+        go.Bar( x=courses, y=negative, width=0.4, marker_color='#eb4034', name='negative'),
+        go.Bar( x=courses, y=positive, width=0.4, marker_color='#109c33', name='positive')
+    ])
+
+    fig.update_layout(barmode='stack',
+                    #   xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                    #   yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                    #   margin=dict(l=0, r=0, b=0, t=0, pad=0),
+                    #   paper_bgcolor="white",
+                      plot_bgcolor="white",
+                      margin=dict(l=33, r=25, b=37, t=5),
+                      xaxis=dict(showline=True, linecolor='black', showgrid=False, gridcolor='black'),
+                      showlegend=False,
+                      yaxis = dict(showgrid=True, gridcolor='rgb(238,238,238)')
+                    #   height=40,
+                      )
+
+
+    return fig
