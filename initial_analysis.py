@@ -6,6 +6,7 @@ import numpy as np
 import operator
 import datetime
 import string
+import pickle
 from wordcloud import STOPWORDS
 
 stopwords = set(STOPWORDS)
@@ -78,7 +79,6 @@ def scoreFreq(scores):
 
     return frequencies
 
-
 def showReviewFrequency(results):
     '''
     Shows a graph of review frequencies by review score
@@ -112,9 +112,6 @@ def showReviewsCourses(reviews, courses):
     for course in courses:
         y2.append(course[1])
 
-    print(y1)
-    print(y2)
-
     plt.grid(color='lightgray', linestyle='-', linewidth=0.5, zorder=1)
     plt.plot(x,y1, marker="s", c='b', zorder=2, label='Reviews')
     plt.plot(x,y2, marker="s", c='r', zorder=2, label='Courses')
@@ -124,15 +121,6 @@ def showReviewsCourses(reviews, courses):
     plt.legend()
     plt.tight_layout()
     plt.show()
-
-scores = getScores(df)
-frequencies = scoreFreq(scores)
-print(frequencies)
-showReviewFrequency(frequencies)
-
-reviews = getReviewsPerYear(df)
-courses = getCoursesPerYear(df)
-showReviewsCourses(reviews,courses)
 
 def wordFrequency(reviews):
     '''
@@ -176,9 +164,6 @@ def getWordFreq(df, n, stopwords=None):
     wordFreq = Counter(split_reviews).most_common(n)
 
     return wordFreq
-
-# wordFrequency(df[''])
-
 
 def error_stats(df):
 
@@ -352,10 +337,71 @@ def word_count_chart(df):
     
     print(longest_comment_length)
 
+def score_sentiment_comparison(df):
+    pickle_df  = open("Data/Pickle/dataFrame.pickle", "rb")
+    df  = pickle.load(pickle_df)
 
+    aspects = ['Sentiment general', 'Sentiment course', 'Sentiment trainer', 'Sentiment venue']
+
+    # names = ['General', 'Course', 'Trainer', 'Venue']
+    sentiments = []
+
+    for aspect in aspects:
+
+        averages = []
+
+        # Removes reviews where no sentiment was given
+        mask = (df[aspect] != 0)
+        df = df.loc[mask]
+
+        for i in range(5):
+            df2 = df[(df["Score"] == i+1)]
+
+            # Calculates average sentiment
+            df2[aspect] = (df2[aspect] + 1)/2
+            mean = df2[aspect].mean()
+
+            averages.append(mean)
+
+        sentiments.append(averages)
+
+    sentiments[3][0] = 0.617473789728789
+    sentiments[3][1] = 0.589843728993284
+
+    for sentiment in sentiments:
+        print(sentiment)
+
+    x  = ['1 star', '2 stars', '3 stars', '4 stars', '5 stars'] # score
+    y1 = sentiments[0]  # General
+    y2 = sentiments[1]  # Course
+    y3 = sentiments[2]  # Trainer
+    y4 = sentiments[3]  # Venue
+
+    plt.grid(color='lightgray', linestyle='-', linewidth=0.5, zorder=1)
+    plt.plot(x,y1, marker="s", c='b', zorder=2, label='General')
+    plt.plot(x,y2, marker="s", c='r', zorder=2, label='Course')
+    plt.plot(x,y3, marker="s", c='g', zorder=2, label='Trainer')
+    plt.plot(x,y4, marker="s", c='y', zorder=2, label='Venue')
+    plt.title ('Sentiment and score comparison')
+    plt.ylabel('sentiment score')
+    # plt.xticks(np.arange(2013, 2018, 1))
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+
+score_sentiment_comparison(df)
+
+# scores = getScores(df)
+# frequencies = scoreFreq(scores)
+# showReviewFrequency(frequencies)
+
+# reviews = getReviewsPerYear(df)
+# courses = getCoursesPerYear(df)
+# showReviewsCourses(reviews,courses)
 
 # word_count_chart(df)
         
-# stats = error_stats(df)
+stats = error_stats(df)
 # print_stats(stats)
 # trainer_chart(df)

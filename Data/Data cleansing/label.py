@@ -38,26 +38,30 @@ def getReviews(data):
 reviews = getReviews(dataset)
 
 reviews_remaining = len(reviews) - completed_positive - completed_negative
+print((len(reviews) - reviews_remaining), 'total sentences labelled so far')
 print(completed_positive, "positive sentences labelled")
-print(completed_negative, "negative sentences labelled")
-print("\nSentences remaining:", reviews_remaining)
+print(completed_negative, "negative sentences labelled\n")
+print(reviews_remaining, "sentences remaining")
+
+print("\nEnter (1) for positive, (2) for negative, or any other key to exit.")
 
 log.write("\nStart: " + str(datetime.now()))
 
 for i in range(len(reviews)):
     if i < last_line: continue
-    print("\n\n" + str(i) + ":    " + reviews[i])
-    entry = int(input())
-    if entry == 0:
+    print("\n\n" + str(i-101) + ":    " + reviews[i])
+    entry = str(input())
+
+    if entry == '1':
+        positive.write(reviews[i] + "\n")
+    elif entry == '2':
+        negative.write(reviews[i] + "\n")
+    elif entry == '3':
+        continue
+    else:
         log.write("\nEnd:   " + str(datetime.now()))
         log.write("\nCompleted up to line " + str(i) + "\n")
         log.close()
         positive.close()
         negative.close()
         break
-    if entry == 1:
-        positive.write(reviews[i] + "\n")
-    if entry == 2:
-        negative.write(reviews[i] + "\n")
-    if entry == 3:
-        continue
